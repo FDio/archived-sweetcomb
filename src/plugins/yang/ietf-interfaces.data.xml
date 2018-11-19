@@ -1,0 +1,21 @@
+<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+  <interface>
+    <name>GigabitEthernet0/8/0</name>
+    <description>Ethernet 8</description>
+    <type>ethernetCsmacd</type>
+    <enabled>true</enabled>
+    <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+      <address>
+        <ip>192.168.2.100</ip>
+        <prefix-length>24</prefix-length>
+      </address>
+    </ipv4>
+    <ipv6 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+      <address>
+        <ip>2001:db8::10</ip>
+        <prefix-length>32</prefix-length>
+      </address>
+    </ipv6>
+  </interface>
+</interfaces>
+
