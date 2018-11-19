@@ -142,7 +142,7 @@ if [ ${EXIT_CODE} == 0 ]; then
     echo "*******************************************************************"
 else
     echo "*******************************************************************"
-    echo "* VPP CHECKSTYLE FAILED"
+    echo "* SWEETCOMB CHECKSTYLE FAILED"
     echo "* CONSULT FAILURE LOG ABOVE"
     echo "* NOTE: Running 'build-root/scripts/checkstyle.sh --fix' *MAY* fix the issue"
     echo "*******************************************************************"

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016 Cisco and/or its affiliates.
+# Copyright (c) 2018 Cisco and/or its affiliates.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
@@ -26,7 +26,7 @@ macro(ADD_UNIT_TEST TEST_NAME)
     add_executable(${TEST_NAME} ${TEST_SRC})
     target_link_libraries(${TEST_NAME} ${CMOCKA_LIBRARIES} srvpp_a)
     add_test(${TEST_NAME} ${TEST_NAME})
-    
+
     if(valgrind_FOUND)
         add_test(${TEST_NAME}_valgrind valgrind
             --error-exitcode=1 --read-var-info=yes

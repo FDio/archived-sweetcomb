@@ -569,25 +569,3 @@ sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
     free(ctx);
 }
 
-/**
- * @brief Callback to be called by plugin daemon periodically, to check whether the plugin and managed app is healthy.
- */
-/*
-int
-sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)
-{
-    plugin_ctx_t *ctx = (plugin_ctx_t *) private_ctx;
-    vl_api_control_ping_t *ping = NULL;
-    int rc = 0;
-
-    ping = srvpp_alloc_msg(VL_API_CONTROL_PING, sizeof(*ping));
-
-    rc = srvpp_send_request(ctx->srvpp_ctx, ping, NULL);
-
-    if (0 != rc) {
-        return SR_ERR_DISCONNECT;
-    } else {
-        return SR_ERR_OK;
-    }
-}
-*/
