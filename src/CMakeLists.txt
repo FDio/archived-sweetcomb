@@ -31,5 +31,5 @@ set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2")
 set(CMAKE_C_FLAGS_DEBUG   "-g -O0")
 
 # add subdirectories
-add_subdirectory(srvpp)
+add_subdirectory(scvpp)
 add_subdirectory(plugins)

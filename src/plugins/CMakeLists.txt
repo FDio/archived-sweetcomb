@@ -18,7 +18,7 @@ project(sysrepo-vpp-plugins)
 
 find_package(PkgConfig)
 pkg_check_modules(SYSREPO REQUIRED libsysrepo)
-pkg_check_modules(SRVPP REQUIRED libsrvpp)
+pkg_check_modules(SCVPP REQUIRED libscvpp)
 
 # get sysrepo plugins directory from pkgconfig
 if (NOT SR_PLUGINS_DIR)
@@ -31,9 +31,16 @@ if (NOT SR_PLUGINS_DIR)
     message(FATAL_ERROR "Cannot get sysrepo plugins directory due to missing pkg-config, set SR_PLUGINS_DIR manually.")
 endif()
 
+# plugins sources
+set(PLUGINS_SOURCES
+    sc_interface.c
+    sc_plugins.c
+)
+
+
 # build the source code into shared library
-add_library(vpp-interfaces SHARED vpp-interfaces.c)
-target_link_libraries(vpp-interfaces ${SYSREPO_LIBRARIES} ${SRVPP_LIBRARIES})
+add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
+target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES})
 
 # install the plugin into plugins dir
-install(TARGETS vpp-interfaces DESTINATION ${SR_PLUGINS_DIR})
+install(TARGETS vpp-plugins DESTINATION ${SR_PLUGINS_DIR})

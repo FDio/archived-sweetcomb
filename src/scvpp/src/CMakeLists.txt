@@ -15,15 +15,14 @@
 
 include(GNUInstallDirs)
 
-# srvpp sources
-set(SRVPP_SOURCES
-    srvpp_logger.c
-    srvpp.c
+# scvpp sources
+set(SCVPP_SOURCES
+    sc_vpp_operation.c
 )
 
-# srvpp public headers
-set(SRVPP_HEADERS
-    srvpp.h
+# scvpp public headers
+set(SCVPP_HEADERS
+    sc_vpp_operation.h
 )
 
 set(CMAKE_C_FLAGS " -g -O0 -fpic -fPIC -std=gnu99 -Wl,-rpath-link=/usr/lib")
@@ -32,13 +31,13 @@ set(CMAKE_C_FLAGS " -g -O0 -fpic -fPIC -std=gnu99 -Wl,-rpath-link=/usr/lib")
 set(LINK_LIBRARIES sysrepo vlibmemoryclient vapiclient vppapiclient svm vppinfra pthread rt dl)
 
 # build instructions
-add_library(srvpp SHARED ${SRVPP_SOURCES})
-add_library(srvpp_a ${SRVPP_SOURCES})
+add_library(scvpp SHARED ${SCVPP_SOURCES})
+add_library(scvpp_a ${SCVPP_SOURCES})
 
 # linker instructions
-target_link_libraries(srvpp ${LINK_LIBRARIES})
-target_link_libraries(srvpp_a ${LINK_LIBRARIES})
+target_link_libraries(scvpp ${LINK_LIBRARIES})
+target_link_libraries(scvpp_a ${LINK_LIBRARIES})
 
 # install rules
-install(TARGETS srvpp DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(FILES ${SRVPP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(TARGETS scvpp DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES ${SCVPP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

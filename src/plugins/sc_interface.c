@@ -18,22 +18,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "sc_interface.h"
 #include <sysrepo.h>
 #include <sysrepo/plugins.h>
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
-#include <srvpp.h>
+#include <vnet/interface.h>
+#include <vapi/interface.api.vapi.h>
 
-/** forward declaration */
-void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx);
-
-/**
- * @brief Plugin context structure.
- */
-typedef struct plugin_ctx_s {
-    srvpp_ctx_t *srvpp_ctx;                  /**< srvpp context. */
-    sr_subscription_ctx_t *sr_subscription;  /**< Sysrepo subscription context. */
-} plugin_ctx_t;
+DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON;
 
 /**
  * @brief Helper function for converting netmask into prefix length.
@@ -73,69 +66,25 @@ ip_addr_str_to_binary(const char *ip_address_str, uint8_t *ip_address_bin, bool 
 }
 
 /**
- * @brief Helper function for converting VPP interface speed information into actual number in bits per second.
- */
-static uint64_t
-get_if_link_speed(uint8_t speed)
-{
-#define ONE_MEGABIT (uint64_t)1000000
-    switch (speed) {
-        case 1:
-            /* 10M */
-            return 10 * ONE_MEGABIT;
-            break;
-        case 2:
-            /* 100M */
-            return 100 * ONE_MEGABIT;
-            break;
-        case 4:
-            /* 1G */
-            return 1000 * ONE_MEGABIT;
-            break;
-        case 8:
-            /* 10G */
-            return 10000 * ONE_MEGABIT;
-            break;
-        case 16:
-            /* 40 G */
-            return 40000 * ONE_MEGABIT;
-            break;
-        case 32:
-            /* 100G */
-            return 100000 * ONE_MEGABIT;
-            break;
-        default:
-            return 0;
-    }
-}
-
-/**
  * @brief Enable or disable given interface.
  */
 static int
-interface_enable_disable(plugin_ctx_t *plugin_ctx, const char *if_name, bool enable)
+interface_enable_disable(const char *if_name, bool enable)
 {
-    vl_api_sw_interface_set_flags_t *if_set_flags_req = NULL;
     uint32_t if_index = ~0;
     int rc = 0;
 
     SRP_LOG_DBG("%s interface '%s'", enable ? "Enabling" : "Disabling", if_name);
 
     /* get interface index */
-    rc = srvpp_get_if_index(plugin_ctx->srvpp_ctx, if_name, &if_index);
+    rc = sc_interface_name2index(if_name, &if_index);
     if (0 != rc) {
         SRP_LOG_ERR("Invalid interface name: %s", if_name);
         return SR_ERR_INVAL_ARG;
     }
 
-    /* process VPP API request */
-    if_set_flags_req = srvpp_alloc_msg(VL_API_SW_INTERFACE_SET_FLAGS, sizeof(*if_set_flags_req));
-
-    if_set_flags_req->sw_if_index = ntohl(if_index);
-    if_set_flags_req->admin_up_down = (uint8_t)enable;
-
-    rc = srvpp_send_request(plugin_ctx->srvpp_ctx, if_set_flags_req, NULL);
-
+    /* enable/disable interface */
+    rc = sc_setInterfaceFlags(if_index, (uint8_t)enable);
     if (0 != rc) {
         SRP_LOG_ERR("Error by processing of the sw_interface_set_flags request, rc=%d", rc);
         return SR_ERR_OPERATION_FAILED;
@@ -148,7 +97,7 @@ interface_enable_disable(plugin_ctx_t *plugin_ctx, const char *if_name, bool ena
  * @brief Callback to be called by any config change of "/ietf-interfaces:interfaces/interface/enabled" leaf.
  */
 static int
-interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
+sc_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
 {
     char *if_name = NULL;
     sr_change_iter_t *iter = NULL;
@@ -180,10 +129,10 @@ interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath, sr_not
         switch (op) {
             case SR_OP_CREATED:
             case SR_OP_MODIFIED:
-                op_rc = interface_enable_disable(private_ctx, if_name, new_val->data.bool_val);
+                op_rc = interface_enable_disable(if_name, new_val->data.bool_val);
                 break;
             case SR_OP_DELETED:
-                op_rc = interface_enable_disable(private_ctx, if_name, false /* !enable */);
+                op_rc = interface_enable_disable(if_name, false /* !enable */);
                 break;
             default:
                 break;
@@ -204,34 +153,22 @@ interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath, sr_not
  * @brief Add or remove IPv4/IPv6 address to/from an interface.
  */
 static int
-interface_ipv46_config_add_remove(plugin_ctx_t *plugin_ctx, const char *if_name, uint8_t *addr, uint8_t prefix,
-        bool is_ipv6, bool add)
+interface_ipv46_config_add_remove(const char *if_name, uint8_t *addr, uint8_t prefix, bool is_ipv6, bool add)
 {
-    vl_api_sw_interface_add_del_address_t *add_del_req = NULL;
     uint32_t if_index = ~0;
     int rc = 0;
 
     SRP_LOG_DBG("%s IP config on interface '%s'.", add ? "Adding" : "Removing", if_name);
 
     /* get interface index */
-    rc = srvpp_get_if_index(plugin_ctx->srvpp_ctx, if_name, &if_index);
+    rc = sc_interface_name2index(if_name, &if_index);
     if (0 != rc) {
         SRP_LOG_ERR("Invalid interface name: %s", if_name);
         return SR_ERR_INVAL_ARG;
     }
 
-    /* process VPP API request */
-    add_del_req = srvpp_alloc_msg(VL_API_SW_INTERFACE_ADD_DEL_ADDRESS, sizeof(*add_del_req));
-
-    memcpy(&add_del_req->address, addr, is_ipv6 ? 16 : 4);
-    add_del_req->is_ipv6 = (uint32_t)is_ipv6;
-    add_del_req->address_length = prefix;
-
-    add_del_req->sw_if_index = ntohl(if_index);
-    add_del_req->is_add = (uint32_t)add;
-
-    rc = srvpp_send_request(plugin_ctx->srvpp_ctx, add_del_req, NULL);
-
+    /* add del addr */
+    rc = sc_interface_add_del_addr(if_index, (uint8_t)add, (uint8_t)is_ipv6, 0, prefix, addr);
     if (0 != rc) {
         SRP_LOG_ERR("Error by processing of the sw_interface_set_flags request, rc=%d", rc);
         return SR_ERR_OPERATION_FAILED;
@@ -239,12 +176,217 @@ interface_ipv46_config_add_remove(plugin_ctx_t *plugin_ctx, const char *if_name,
         return SR_ERR_OK;
     }
 }
+int sc_initSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
+{
+  if(dctx == NULL)
+    return -1;
+
+  dctx->intfcArray = NULL;
+  dctx->last_called = false;
+  dctx->capacity = 0;
+  dctx->num_ifs = 0;
+  return 0;
+}
+int sc_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
+{
+  if(dctx == NULL)
+    return -1;
+
+  if(dctx->intfcArray != NULL)
+    {
+      printf("free intfcArray %p\n", dctx->intfcArray);
+      free(dctx->intfcArray);
+    }
+
+  return sc_initSwInterfaceDumpCTX(dctx);
+}
+vapi_error_e
+sc_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
+                      vapi_error_e rv, bool is_last,
+                      vapi_payload_sw_interface_details * reply)
+{
+  sc_sw_interface_dump_ctx *dctx = callback_ctx;
+  if (is_last)
+    {
+      dctx->last_called = true;
+    }
+  else
+    {
+      //printf ("Interface dump entry: [%u]: %s\n", reply->sw_if_index,
+      //              reply->interface_name);
+      if(dctx->capacity == 0 && dctx->intfcArray == NULL)
+        {
+          dctx->capacity = 10;
+          dctx->intfcArray = (scVppIntfc*)malloc( sizeof(scVppIntfc)*dctx->capacity );
+        }
+      if(dctx->num_ifs >= dctx->capacity-1)
+        {
+
+          dctx->capacity += 10;
+          dctx->intfcArray = (scVppIntfc*)realloc(dctx->intfcArray, sizeof(scVppIntfc)*dctx->capacity );
+        }
+
+      dctx->intfcArray[dctx->num_ifs].sw_if_index = reply->sw_if_index;
+      strncpy(dctx->intfcArray[dctx->num_ifs].interface_name, reply->interface_name, VPP_INTFC_NAME_LEN);
+      dctx->intfcArray[dctx->num_ifs].l2_address_length = reply->l2_address_length;
+      memcpy(dctx->intfcArray[dctx->num_ifs].l2_address, reply->l2_address, reply->l2_address_length );
+     //dctx->intfcArray[dctx->num_ifs].link_speed = reply->link_speed;
+#define ONE_MEGABIT (uint64_t)1000000
+      switch (reply->link_speed << VNET_HW_INTERFACE_FLAG_SPEED_SHIFT)
+        {
+        case VNET_HW_INTERFACE_FLAG_SPEED_10M:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 10 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_100M:
+           dctx->intfcArray[dctx->num_ifs].link_speed = 100 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_1G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 1000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_2_5G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 2500 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_5G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 5000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_10G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 10000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_20G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 20000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_25G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 25000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_40G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 40000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_50G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 50000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_56G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 56000 * ONE_MEGABIT;
+          break;
+        case VNET_HW_INTERFACE_FLAG_SPEED_100G:
+	  dctx->intfcArray[dctx->num_ifs].link_speed = 100000 * ONE_MEGABIT;
+          break;
+        default:
+          dctx->intfcArray[dctx->num_ifs].link_speed = 0;
+          break;
+        }
+
+        dctx->intfcArray[dctx->num_ifs].link_mtu = reply->link_mtu;
+        dctx->intfcArray[dctx->num_ifs].admin_up_down = reply->admin_up_down;
+        dctx->intfcArray[dctx->num_ifs].link_up_down = reply->link_up_down;
+
+      dctx->num_ifs += 1;
+    }
+  return VAPI_OK;
+}
+int sc_swInterfaceDump(sc_sw_interface_dump_ctx * dctx)
+{
+  if(dctx == NULL)
+    {
+      return -1;
+    }
+
+  //sc_sw_interface_dump_ctx dctx = { false, 0, 0, 0 };
+  vapi_msg_sw_interface_dump *dump;
+  vapi_error_e rv;
+  //  dctx->last_called = false;
+  sc_initSwInterfaceDumpCTX(dctx);
+  dump = vapi_alloc_sw_interface_dump (g_vapi_ctx_instance);
+  dump->payload.name_filter_valid = 0;
+  memset (dump->payload.name_filter, 0, sizeof (dump->payload.name_filter));
+  while (VAPI_EAGAIN ==
+         (rv =
+          vapi_sw_interface_dump (g_vapi_ctx_instance, dump, sc_sw_interface_dump_cb,
+                                  dctx)));
+
+  return dctx->num_ifs;
+}
+
+u32 sc_interface_name2index(const char *name, u32* if_index)
+{
+  u32 ret = -1;
+  sc_sw_interface_dump_ctx dctx = {false, 0, 0, 0};
+  vapi_msg_sw_interface_dump *dump;
+  vapi_error_e rv;
+  dctx.last_called = false;
+  dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
+  dump->payload.name_filter_valid = 0;
+  memset(dump->payload.name_filter, 0, sizeof(dump->payload.name_filter));
+  while (VAPI_EAGAIN == (rv = vapi_sw_interface_dump(g_vapi_ctx_instance, dump, sc_sw_interface_dump_cb, &dctx)))
+    ;
+  printf("interface dump over, there are %d intfc\n", dctx.num_ifs);
+  int i = 0;
+  for (; i < dctx.num_ifs; ++i)
+  {
+    printf("Index[%d] %s\n", dctx.intfcArray[i].sw_if_index, dctx.intfcArray[i].interface_name);
+    if (strcmp(dctx.intfcArray[i].interface_name, name) == 0)
+    {
+      *if_index = dctx.intfcArray[i].sw_if_index;
+      ret = 0;
+      break;
+    }
+  }
+  sc_freeSwInterfaceDumpCTX(&dctx);
+
+  return ret;
+}
+
+i32 sc_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_all,
+			       u8 address_length, u8 address[VPP_IP6_ADDRESS_LEN] )
+{
+  i32 ret = -1;
+  vapi_msg_sw_interface_add_del_address *msg = vapi_alloc_sw_interface_add_del_address(g_vapi_ctx_instance);
+  msg->payload.sw_if_index = sw_if_index;
+  msg->payload.is_add = is_add;
+  msg->payload.is_ipv6 = is_ipv6;
+  msg->payload.del_all = del_all;
+  msg->payload.address_length = address_length;
+  memcpy(msg->payload.address, address, VPP_IP6_ADDRESS_LEN);
+  vapi_msg_sw_interface_add_del_address_hton (msg);
+
+  vapi_error_e rv = vapi_send (g_vapi_ctx_instance, msg);
+
+  vapi_msg_sw_interface_add_del_address_reply *resp;
+  
+  SC_VPP_VAPI_RECV;
+
+  vapi_msg_sw_interface_add_del_address_reply_hton(resp);
+  printf("addDelInterfaceAddr : %d \n", resp->payload.retval);
+  ret = resp->payload.retval;
+  vapi_msg_free (g_vapi_ctx_instance, resp);
+  return ret;
+}
+i32 sc_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down)
+{
+  i32 ret = -1;
+  vapi_msg_sw_interface_set_flags *msg = vapi_alloc_sw_interface_set_flags(g_vapi_ctx_instance);
+  msg->payload.sw_if_index = sw_if_index;
+  msg->payload.admin_up_down = admin_up_down;
+  vapi_msg_sw_interface_set_flags_hton (msg);
+
+  vapi_error_e rv = vapi_send (g_vapi_ctx_instance, msg);
+
+  vapi_msg_sw_interface_set_flags_reply *resp;
+
+  SC_VPP_VAPI_RECV;
+
+  vapi_msg_sw_interface_set_flags_reply_ntoh(resp);
+  printf("setInterfaceFlags:%d \n", resp->payload.retval);
+  ret = resp->payload.retval;
+  vapi_msg_free (g_vapi_ctx_instance, resp);
+  return ret;
+}
+
 
 /**
  * @brief Modify existing IPv4/IPv6 config on an interface.
  */
 static int
-interface_ipv46_config_modify(plugin_ctx_t *plugin_ctx, sr_session_ctx_t *session, const char *if_name,
+interface_ipv46_config_modify(sr_session_ctx_t *session, const char *if_name,
         sr_val_t *old_val, sr_val_t *new_val, bool is_ipv6)
 {
     sr_xpath_ctx_t xpath_ctx = { 0, };
@@ -268,7 +410,7 @@ interface_ipv46_config_modify(plugin_ctx_t *plugin_ctx, sr_session_ctx_t *sessio
     sr_xpath_recover(&xpath_ctx);
 
     /* delete old IP config */
-    rc = interface_ipv46_config_add_remove(plugin_ctx, if_name, addr, prefix, is_ipv6, false /* remove */);
+    rc = interface_ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, false /* remove */);
     if (SR_ERR_OK != rc) {
         SRP_LOG_ERR("Unable to remove old IP address config, rc=%d", rc);
         return rc;
@@ -282,7 +424,7 @@ interface_ipv46_config_modify(plugin_ctx_t *plugin_ctx, sr_session_ctx_t *sessio
     }
 
     /* set new IP config */
-    rc = interface_ipv46_config_add_remove(plugin_ctx, if_name, addr, prefix, is_ipv6, true /* add */);
+    rc = interface_ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, true /* add */);
     if (SR_ERR_OK != rc) {
         SRP_LOG_ERR("Unable to remove old IP address config, rc=%d", rc);
         return rc;
@@ -296,7 +438,7 @@ interface_ipv46_config_modify(plugin_ctx_t *plugin_ctx, sr_session_ctx_t *sessio
  * or "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address".
  */
 static int
-interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
+sc_interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
 {
     sr_change_iter_t *iter = NULL;
     sr_change_oper_t op = SR_OP_CREATED;
@@ -354,12 +496,12 @@ interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpath, 
                         has_prefix = true;
                     }
                     if (has_addr && has_prefix) {
-                        op_rc = interface_ipv46_config_add_remove(private_ctx, if_name, addr, prefix, is_ipv6, true /* add */);
+                        op_rc = interface_ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, true /* add */);
                     }
                 }
                 break;
             case SR_OP_MODIFIED:
-                op_rc = interface_ipv46_config_modify(private_ctx, session, if_name, old_val, new_val, is_ipv6);
+                op_rc = interface_ipv46_config_modify(session, if_name, old_val, new_val, is_ipv6);
                 break;
             case SR_OP_DELETED:
                 if (SR_LIST_T == old_val->type) {
@@ -377,7 +519,7 @@ interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpath, 
                         has_prefix = true;
                     }
                     if (has_addr && has_prefix) {
-                        op_rc = interface_ipv46_config_add_remove(private_ctx, if_name, addr, prefix, is_ipv6, false /* !add */);
+                        op_rc = interface_ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, false /* !add */);
                     }
                 }
                 break;
@@ -401,7 +543,7 @@ interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpath, 
  * Does not provide any functionality, needed just to cover not supported config leaves.
  */
 static int
-interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
+sc_interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
 {
     SRP_LOG_DBG("'%s' modified, event=%d", xpath, event);
 
@@ -412,55 +554,62 @@ interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event
  * @brief Callback to be called by any request for state data under "/ietf-interfaces:interfaces-state/interface" path.
  */
 static int
-interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, void *private_ctx)
+sc_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, void *private_ctx)
 {
-    plugin_ctx_t *plugin_ctx = private_ctx;
-    vl_api_sw_interface_dump_t *if_dump_req = NULL;
-    vl_api_sw_interface_details_t *if_details = NULL;
-    void **details = NULL;
-    size_t details_cnt = 0;
     sr_val_t *values_arr = NULL;
     size_t values_arr_size = 0, values_arr_cnt = 0;
+    sc_sw_interface_dump_ctx dctx;
+    scVppIntfc* if_details;
     int rc = 0;
 
     SRP_LOG_DBG("Requesting state data for '%s'", xpath);
+printf("%d\n", __LINE__);
+    printf("Requesting state data for '%s'\n", xpath);
 
     if (! sr_xpath_node_name_eq(xpath, "interface")) {
         /* statistics, ipv4 and ipv6 state data not supported */
-        *values_cnt = 0;
-        return SR_ERR_OK;
+      printf("============= you want %s ?\n ", xpath);
+      *values = NULL;
+      *values_cnt = 0;
+      return SR_ERR_OK;
     }
 
     /* dump interfaces */
-    if_dump_req = srvpp_alloc_msg(VL_API_SW_INTERFACE_DUMP, sizeof(*if_dump_req));
-    rc = srvpp_send_dumprequest(plugin_ctx->srvpp_ctx, if_dump_req, &details, &details_cnt);
-    if (0 != rc) {
+    rc = sc_swInterfaceDump(&dctx);
+    if (rc <= 0) {
         SRP_LOG_ERR_MSG("Error by processing of a interface dump request.");
+	sc_freeSwInterfaceDumpCTX(&dctx);
         return SR_ERR_INTERNAL;
     }
 
     /* allocate array of values to be returned */
-    values_arr_size = details_cnt * 5;
+    values_arr_size = dctx.num_ifs * 5;
     rc = sr_new_values(values_arr_size, &values_arr);
     if (0 != rc) {
+      sc_freeSwInterfaceDumpCTX(&dctx);
         return rc;
     }
+    printf("create %d sr vals\n", values_arr_size);
 
-    for (size_t i = 0; i < details_cnt; i++) {
-        if_details = (vl_api_sw_interface_details_t *) details[i];
+    size_t i = 0;
+    for (; i < dctx.num_ifs; i++) {
+        if_details = dctx.intfcArray+i;
 
         /* currently the only supported interface types are propVirtual / ethernetCsmacd */
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/type", xpath, if_details->interface_name);
         sr_val_set_str_data(&values_arr[values_arr_cnt], SR_IDENTITYREF_T,
-                strstr((char*)if_details->interface_name, "local") ? "iana-if-type:propVirtual" : "iana-if-type:ethernetCsmacd");
+                strstr((char*)if_details->interface_name, "local0") ? "iana-if-type:propVirtual" : "iana-if-type:ethernetCsmacd");
+printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
 
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/admin-status", xpath, if_details->interface_name);
         sr_val_set_str_data(&values_arr[values_arr_cnt], SR_ENUM_T, if_details->admin_up_down ? "up" : "down");
+printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
 
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/oper-status", xpath, if_details->interface_name);
         sr_val_set_str_data(&values_arr[values_arr_cnt], SR_ENUM_T, if_details->link_up_down ? "up" : "down");
+printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
 
         if (if_details->l2_address_length > 0) {
@@ -468,19 +617,30 @@ interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, voi
             sr_val_build_str_data(&values_arr[values_arr_cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x",
                     if_details->l2_address[0], if_details->l2_address[1], if_details->l2_address[2],
                     if_details->l2_address[3], if_details->l2_address[4], if_details->l2_address[5]);
+printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
             values_arr_cnt++;
-        }
+        } else {
+	  sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/phys-address", xpath, if_details->interface_name);
+	  sr_val_build_str_data(&values_arr[values_arr_cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x", 0,0,0,0,0,0);
+	  printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
+	  values_arr_cnt++;
+	}
 
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/speed", xpath, if_details->interface_name);
         values_arr[values_arr_cnt].type = SR_UINT64_T;
-        values_arr[values_arr_cnt].data.uint64_val = get_if_link_speed(if_details->link_speed);
+        values_arr[values_arr_cnt].data.uint64_val = if_details->link_speed;
+printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
     }
 
     SRP_LOG_DBG("Returning %zu state data elements for '%s'", values_arr, xpath);
+    printf("\nReturning %d  data elements for '%s'\n", values_arr_cnt, xpath);
 
     *values = values_arr;
     *values_cnt = values_arr_cnt;
+
+    sc_freeSwInterfaceDumpCTX(&dctx);
+
     return SR_ERR_OK;
 }
 
@@ -488,84 +648,52 @@ interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, voi
  * @brief Callback to be called by plugin daemon upon plugin load.
  */
 int
-sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
+sc_interface_subscribe_events(sr_session_ctx_t *session,
+			      sr_subscription_ctx_t **subscription)
 {
-    plugin_ctx_t *ctx = NULL;
     int rc = SR_ERR_OK;
 
     SRP_LOG_DBG_MSG("Initializing vpp-interfaces plugin.");
 
-    /* allocate the plugin context */
-    ctx = calloc(1, sizeof(*ctx));
-    if (NULL == ctx) {
-        return SR_ERR_NOMEM;
-    }
-
-    /* get srvpp context */
-    ctx->srvpp_ctx = srvpp_get_ctx();
-    if (NULL == ctx->srvpp_ctx) {
-        return SR_ERR_INIT_FAILED;
-    }
-
-    /* setup handlers for required VPP API messages */
-    srvpp_setup_handler(SW_INTERFACE_SET_FLAGS_REPLY, sw_interface_set_flags_reply);
-    srvpp_setup_handler(SW_INTERFACE_ADD_DEL_ADDRESS_REPLY, sw_interface_add_del_address_reply);
-
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface",
-            interface_change_cb, ctx, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &ctx->sr_subscription);
+            sc_interface_change_cb, g_vapi_ctx_instance, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/enabled",
-            interface_enable_disable_cb, ctx, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &ctx->sr_subscription);
+            sc_interface_enable_disable_cb, g_vapi_ctx_instance, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address",
-            interface_ipv46_address_change_cb, ctx, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &ctx->sr_subscription);
+            sc_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address",
-            interface_ipv46_address_change_cb, ctx, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &ctx->sr_subscription);
+            sc_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_dp_get_items_subscribe(session, "/ietf-interfaces:interfaces-state",
-            interface_state_cb, ctx, SR_SUBSCR_CTX_REUSE, &ctx->sr_subscription);
+				   sc_interface_state_cb, g_vapi_ctx_instance, SR_SUBSCR_DEFAULT/*SR_SUBSCR_CTX_REUSE*/, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
-    *private_ctx = ctx;
 
     SRP_LOG_INF_MSG("vpp-interfaces plugin initialized successfully.");
+    printf("vpp-interfaces plugin initialized successfully.\n");
 
     return SR_ERR_OK;
 
 error:
-    SRP_LOG_ERR_MSG("Error by initialization of the vpp-interfaces plugin.");
-    sr_plugin_cleanup_cb(session, ctx);
+    SRP_LOG_ERR_MSG("Error by initialization of the sc_interfaces plugin.");
+    sr_plugin_cleanup_cb(session, g_vapi_ctx_instance);
     return rc;
-}
-
-/**
- * @brief Callback to be called by plugin daemon upon plugin unload.
- */
-void
-sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
-{
-    plugin_ctx_t *ctx = (plugin_ctx_t *) private_ctx;
-
-    SRP_LOG_DBG_MSG("Cleanup of vpp-interfaces plugin requested.");
-
-    sr_unsubscribe(session, ctx->sr_subscription);
-
-    srvpp_release_ctx(ctx->srvpp_ctx);
-    free(ctx);
 }
 

@@ -24,7 +24,7 @@ macro(ADD_UNIT_TEST TEST_NAME)
         ${TEST_NAME}.c
     )
     add_executable(${TEST_NAME} ${TEST_SRC})
-    target_link_libraries(${TEST_NAME} ${CMOCKA_LIBRARIES} srvpp_a)
+    target_link_libraries(${TEST_NAME} ${CMOCKA_LIBRARIES} scvpp_a)
     add_test(${TEST_NAME} ${TEST_NAME})
 
     if(valgrind_FOUND)
@@ -37,4 +37,4 @@ macro(ADD_UNIT_TEST TEST_NAME)
 endmacro(ADD_UNIT_TEST)
 
 # add individual unit-tests
-ADD_UNIT_TEST(srvpp_test)
+ADD_UNIT_TEST(scvpp_test)
