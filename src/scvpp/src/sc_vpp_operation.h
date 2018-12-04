@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 HUACHENTEL and/or its affiliates.
+ * Copyright (c) 2018 PANTHEON.tech
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at:
@@ -59,6 +60,32 @@ DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
 #define SC_INVOKE_BEGIN SC_LOG_DBG("inovke %s bein.",SC_THIS_FUNC);
 #define SC_INVOKE_END   SC_LOG_DBG("inovke %s end,with return OK.",SC_THIS_FUNC);
 #define SC_INVOKE_ENDX(...)  SC_LOG_DBG("inovke %s end,with %s.",SC_THIS_FUNC, ##__VA_ARGS__)
+
+#define ARG_CHECK(retval, arg) \
+    do \
+    { \
+        if (NULL == (arg)) \
+        { \
+            ERROR(#arg ":NULL pointer passed."); \
+            return (retval); \
+        } \
+    } \
+    while (0)
+
+#define ARG_CHECK2(retval, arg1, arg2) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2)
+
+#define ARG_CHECK3(retval, arg1, arg2, arg3) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2); \
+    ARG_CHECK(retval, arg3)
+
+#define ARG_CHECK4(retval, arg1, arg2, arg3, arg4) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2); \
+    ARG_CHECK(retval, arg3); \
+    ARG_CHECK(retval, arg4)
 
 /**
  * when use tihs must fist DEFINE_VAPI_MSG_IDS_VXLAN_API_JSON

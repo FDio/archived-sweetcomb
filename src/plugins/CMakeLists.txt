@@ -31,6 +31,15 @@ if (NOT SR_PLUGINS_DIR)
     message(FATAL_ERROR "Cannot get sysrepo plugins directory due to missing pkg-config, set SR_PLUGINS_DIR manually.")
 endif()
 
+set(BAPI_SRC
+    ./bapi/bapi.c
+    ./bapi/bapi_interface.c
+    ./bapi/bapi_ip.c
+    )
+add_library(bapi SHARED ${BAPI_SRC})
+target_include_directories(bapi PUBLIC ${VPP_INCLUDE_DIRS} ./bapi)
+target_link_libraries(bapi ${VPP_LIBRARIES})
+
 # plugins sources
 set(PLUGINS_SOURCES
     sc_interface.c
@@ -43,7 +52,7 @@ set(PLUGINS_SOURCES
 
 # build the source code into shared library
 add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
-target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES})
+target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES} bapi)
 
 # install the plugin into plugins dir
 install(TARGETS vpp-plugins DESTINATION ${SR_PLUGINS_DIR})
