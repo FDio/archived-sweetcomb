@@ -35,6 +35,8 @@ endif()
 set(PLUGINS_SOURCES
     sc_interface.c
     sc_plugins.c
+    openconfig/openconfig_interfaces.c
+    openconfig/sys_util.c
 )
 
 
