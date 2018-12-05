@@ -1,0 +1,5 @@
+# Ignore everything in this directory
+build-root/*
+# Except this
+!/build-root/scripts
+!/build-root/scripts/*
