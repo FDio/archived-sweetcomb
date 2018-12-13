@@ -263,3 +263,19 @@ void openconfig_unsubscribe(plugin_main_t* plugin_main)
         } while (plugin_subcscription != NULL);
     }
 }
+
+plugin_main_t plugin_main;
+
+int openconfig_plugin_init(sr_session_ctx_t* session)
+{
+    memset((void*) &plugin_main, 0, sizeof(plugin_main));
+
+    plugin_main.ds_running = session;
+
+    openconfig_register_subscribe(&plugin_main);
+}
+
+void openconfig_plugin_cleanup()
+{
+    openconfig_register_subscribe(&plugin_main);
+}
