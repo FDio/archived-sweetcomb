@@ -32,26 +32,26 @@ typedef struct _s_vpp_interface_
   u8 link_up_down;
 }scVppIntfc;
 
-typedef struct _sc_sw_interface_dump_ctx
+typedef struct _ietf_sw_interface_dump_ctx
 {
   u8 last_called;
   int num_ifs;
   int capacity;
   scVppIntfc * intfcArray;
-} sc_sw_interface_dump_ctx;
+} ietf_sw_interface_dump_ctx;
 
-int sc_initSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx);
-int sc_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx);
-int sc_swInterfaceDump(sc_sw_interface_dump_ctx * dctx);
-u32 sc_interface_name2index(const char *name, u32* if_index);
+int ietf_initSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
+int ietf_freeSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
+int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx);
+u32 ietf_interface_name2index(const char *name, u32* if_index);
 
-i32 sc_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_all,
+i32 ietf_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_all,
 			       u8 address_length, u8 address[VPP_IP6_ADDRESS_LEN] );
-i32 sc_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down);
+i32 ietf_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down);
 
 
 int
-sc_interface_subscribe_events(sr_session_ctx_t *session,
+ietf_interface_subscribe_events(sr_session_ctx_t *session,
 			      sr_subscription_ctx_t **subscription);
 
 #endif /* SC_INTERFACE_H */

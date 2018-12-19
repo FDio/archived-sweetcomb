@@ -53,7 +53,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
   //SC_REGISTER_RPC_EVT_HANDLER(sc_l2_interface_set_l2_bridge_subscribe_events);
 	
   //INTERFACE
-  sc_interface_subscribe_events(session, &subscription);
+  ietf_interface_subscribe_events(session, &subscription);
 
   //Openconfig modules
   openconfig_plugin_init(session);

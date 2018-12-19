@@ -81,14 +81,14 @@ interface_enable_disable(const char *if_name, bool enable)
     SRP_LOG_DBG("%s interface '%s'", enable ? "Enabling" : "Disabling", if_name);
 
     /* get interface index */
-    rc = sc_interface_name2index(if_name, &if_index);
+    rc = ietf_interface_name2index(if_name, &if_index);
     if (0 != rc) {
         SRP_LOG_ERR("Invalid interface name: %s", if_name);
         return SR_ERR_INVAL_ARG;
     }
 
     /* enable/disable interface */
-    rc = sc_setInterfaceFlags(if_index, (uint8_t)enable);
+    rc = ietf_setInterfaceFlags(if_index, (uint8_t)enable);
     if (0 != rc) {
         SRP_LOG_ERR("Error by processing of the sw_interface_set_flags request, rc=%d", rc);
         return SR_ERR_OPERATION_FAILED;
@@ -165,14 +165,14 @@ interface_ipv46_config_add_remove(const char *if_name, uint8_t *addr, uint8_t pr
     SRP_LOG_DBG("%s IP config on interface '%s'.", add ? "Adding" : "Removing", if_name);
 
     /* get interface index */
-    rc = sc_interface_name2index(if_name, &if_index);
+    rc = ietf_interface_name2index(if_name, &if_index);
     if (0 != rc) {
         SRP_LOG_ERR("Invalid interface name: %s", if_name);
         return SR_ERR_INVAL_ARG;
     }
 
     /* add del addr */
-    rc = sc_interface_add_del_addr(if_index, (uint8_t)add, (uint8_t)is_ipv6, 0, prefix, addr);
+    rc = ietf_interface_add_del_addr(if_index, (uint8_t)add, (uint8_t)is_ipv6, 0, prefix, addr);
     if (0 != rc) {
         SRP_LOG_ERR("Error by processing of the sw_interface_set_flags request, rc=%d", rc);
         return SR_ERR_OPERATION_FAILED;
@@ -180,7 +180,7 @@ interface_ipv46_config_add_remove(const char *if_name, uint8_t *addr, uint8_t pr
         return SR_ERR_OK;
     }
 }
-int ietf_initSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
+int ietf_initSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx)
 {
   if(dctx == NULL)
     return -1;
@@ -191,7 +191,7 @@ int ietf_initSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
   dctx->num_ifs = 0;
   return 0;
 }
-int ietf_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
+int ietf_freeSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx)
 {
   if(dctx == NULL)
     return -1;
@@ -201,14 +201,14 @@ int ietf_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
       free(dctx->intfcArray);
     }
 
-  return sc_initSwInterfaceDumpCTX(dctx);
+  return ietf_initSwInterfaceDumpCTX(dctx);
 }
 vapi_error_e
 ietf_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
                       vapi_error_e rv, bool is_last,
                       vapi_payload_sw_interface_details * reply)
 {
-  sc_sw_interface_dump_ctx *dctx = callback_ctx;
+  ietf_sw_interface_dump_ctx *dctx = callback_ctx;
   if (is_last)
     {
       dctx->last_called = true;
@@ -248,18 +248,18 @@ ietf_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
     }
   return VAPI_OK;
 }
-int ietf_swInterfaceDump(sc_sw_interface_dump_ctx * dctx)
+int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx)
 {
   if(dctx == NULL)
     {
       return -1;
     }
 
-  //sc_sw_interface_dump_ctx dctx = { false, 0, 0, 0 };
+  //ietf_sw_interface_dump_ctx dctx = { false, 0, 0, 0 };
   vapi_msg_sw_interface_dump *dump;
   vapi_error_e rv;
   //  dctx->last_called = false;
-  sc_initSwInterfaceDumpCTX(dctx);
+  ietf_initSwInterfaceDumpCTX(dctx);
   dump = vapi_alloc_sw_interface_dump (g_vapi_ctx_instance);
   dump->payload.name_filter_valid = 0;
   memset (dump->payload.name_filter, 0, sizeof (dump->payload.name_filter));
@@ -274,7 +274,7 @@ int ietf_swInterfaceDump(sc_sw_interface_dump_ctx * dctx)
 u32 ietf_interface_name2index(const char *name, u32* if_index)
 {
   u32 ret = -1;
-  sc_sw_interface_dump_ctx dctx = {false, 0, 0, 0};
+  ietf_sw_interface_dump_ctx dctx = {false, 0, 0, 0};
   vapi_msg_sw_interface_dump *dump;
   vapi_error_e rv;
   dctx.last_called = false;
@@ -294,7 +294,7 @@ u32 ietf_interface_name2index(const char *name, u32* if_index)
       break;
     }
   }
-  sc_freeSwInterfaceDumpCTX(&dctx);
+  ietf_freeSwInterfaceDumpCTX(&dctx);
 
   return ret;
 }
@@ -520,7 +520,7 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt
 {
     sr_val_t *values_arr = NULL;
     int values_arr_size = 0, values_arr_cnt = 0;
-    sc_sw_interface_dump_ctx dctx;
+    ietf_sw_interface_dump_ctx dctx;
     scVppIntfc* if_details;
     int rc = 0;
 
@@ -534,10 +534,10 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt
     }
 
     /* dump interfaces */
-    rc = sc_swInterfaceDump(&dctx);
+    rc = ietf_swInterfaceDump(&dctx);
     if (rc <= 0) {
         SRP_LOG_ERR_MSG("Error by processing of a interface dump request.");
-	sc_freeSwInterfaceDumpCTX(&dctx);
+	    ietf_freeSwInterfaceDumpCTX(&dctx);
         return SR_ERR_INTERNAL;
     }
 
@@ -545,7 +545,7 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt
     values_arr_size = dctx.num_ifs * 5;
     rc = sr_new_values(values_arr_size, &values_arr);
     if (0 != rc) {
-      sc_freeSwInterfaceDumpCTX(&dctx);
+        ietf_freeSwInterfaceDumpCTX(&dctx);
         return rc;
     }
 
@@ -590,7 +590,7 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt
     *values = values_arr;
     *values_cnt = values_arr_cnt;
 
-    sc_freeSwInterfaceDumpCTX(&dctx);
+    ietf_freeSwInterfaceDumpCTX(&dctx);
 
     return SR_ERR_OK;
 }
