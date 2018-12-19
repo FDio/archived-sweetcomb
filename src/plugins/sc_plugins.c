@@ -16,23 +16,19 @@
 #include <vapi/vpe.api.vapi.h>
 #include <vapi/interface.api.vapi.h>
 #include <vapi/l2.api.vapi.h>
-#include <vapi/stats.api.vapi.h>
 #include <vapi/ip.api.vapi.h>
 #include <vapi/tap.api.vapi.h>
 #include <vapi/ipsec.api.vapi.h>
 #include <vapi/vxlan.api.vapi.h>
-#include <vapi/hc.api.vapi.h>
 #include <vnet/interface.h>
 #include <vnet/mpls/mpls_types.h>
 DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
 DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON;
 DEFINE_VAPI_MSG_IDS_L2_API_JSON;
-DEFINE_VAPI_MSG_IDS_STATS_API_JSON;
 DEFINE_VAPI_MSG_IDS_IP_API_JSON;
 DEFINE_VAPI_MSG_IDS_TAP_API_JSON;
 DEFINE_VAPI_MSG_IDS_IPSEC_API_JSON;
 DEFINE_VAPI_MSG_IDS_VXLAN_API_JSON;
-DEFINE_VAPI_MSG_IDS_HC_API_JSON;
 
 
 #include "sc_plugins.h"
@@ -76,7 +72,7 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 {
   SC_INVOKE_BEGIN;
 
-  openconfig_plugin_clean();
+  openconfig_plugin_cleanup();
 
   /* subscription was set as our private context */
   sr_unsubscribe(session, private_ctx);

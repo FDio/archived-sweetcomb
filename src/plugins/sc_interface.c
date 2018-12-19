@@ -25,7 +25,10 @@
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
 #include <vnet/interface.h>
+#include <vnet/vnet.h>
+#include <vnet/ip/ip.h>
 #include <vapi/interface.api.vapi.h>
+
 
 DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON;
 
@@ -232,42 +235,6 @@ sc_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
 #define ONE_MEGABIT (uint64_t)1000000
       switch (reply->link_speed << VNET_HW_INTERFACE_FLAG_SPEED_SHIFT)
         {
-        case VNET_HW_INTERFACE_FLAG_SPEED_10M:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 10 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_100M:
-           dctx->intfcArray[dctx->num_ifs].link_speed = 100 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_1G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 1000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_2_5G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 2500 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_5G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 5000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_10G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 10000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_20G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 20000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_25G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 25000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_40G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 40000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_50G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 50000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_56G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 56000 * ONE_MEGABIT;
-          break;
-        case VNET_HW_INTERFACE_FLAG_SPEED_100G:
-	  dctx->intfcArray[dctx->num_ifs].link_speed = 100000 * ONE_MEGABIT;
-          break;
         default:
           dctx->intfcArray[dctx->num_ifs].link_speed = 0;
           break;
