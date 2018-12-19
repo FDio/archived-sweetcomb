@@ -54,19 +54,28 @@ netmask_to_prefix(const char *netmask)
 /**
  * @brief Helper function for converting IPv4/IPv6 address string into binary representation.
  */
-static void
+static int
 ip_addr_str_to_binary(const char *ip_address_str, uint8_t *ip_address_bin, bool is_ipv6)
 {
     struct in6_addr addr6 = { 0, };
     struct in_addr addr4 = { 0, };
+    int ret = 0;
 
     if (is_ipv6) {
-        inet_pton(AF_INET6, ip_address_str, &(addr6));
-        memcpy(ip_address_bin, &addr6, sizeof(addr6));
+        ret = inet_pton(AF_INET6, ip_address_str, &(addr6));
+        if (1 == ret)
+        {
+            memcpy(ip_address_bin, &addr6, sizeof(addr6));
+        }
     } else {
-        inet_pton(AF_INET, ip_address_str, &(addr4));
-        memcpy(ip_address_bin, &addr4, sizeof(addr4));
+        ret = inet_pton(AF_INET, ip_address_str, &(addr4));
+        if (1 == ret)
+        {
+            memcpy(ip_address_bin, &addr4, sizeof(addr4));
+        }
     }
+
+    return ret;
 }
 
 /**
@@ -227,22 +236,24 @@ ietf_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
           dctx->intfcArray = (scVppIntfc*)realloc(dctx->intfcArray, sizeof(scVppIntfc)*dctx->capacity );
         }
 
-      dctx->intfcArray[dctx->num_ifs].sw_if_index = reply->sw_if_index;
-      strncpy(dctx->intfcArray[dctx->num_ifs].interface_name, reply->interface_name, VPP_INTFC_NAME_LEN);
-      dctx->intfcArray[dctx->num_ifs].l2_address_length = reply->l2_address_length;
-      memcpy(dctx->intfcArray[dctx->num_ifs].l2_address, reply->l2_address, reply->l2_address_length );
-     //dctx->intfcArray[dctx->num_ifs].link_speed = reply->link_speed;
+    scVppIntfc * thisIntfc = &dctx->intfcArray[dctx->num_ifs];
+
+      thisIntfc->sw_if_index = reply->sw_if_index;
+      strncpy(thisIntfc->interface_name, reply->interface_name, VPP_INTFC_NAME_LEN);
+      thisIntfc->l2_address_length = reply->l2_address_length;
+      memcpy(thisIntfc->l2_address, reply->l2_address, reply->l2_address_length );
+     //thisIntfc->link_speed = reply->link_speed;
 #define ONE_MEGABIT (uint64_t)1000000
       switch (reply->link_speed << VNET_HW_INTERFACE_FLAG_SPEED_SHIFT)
         {
         default:
-          dctx->intfcArray[dctx->num_ifs].link_speed = 0;
+          thisIntfc->link_speed = 0;
           break;
         }
 
-        dctx->intfcArray[dctx->num_ifs].link_mtu = reply->link_mtu;
-        dctx->intfcArray[dctx->num_ifs].admin_up_down = reply->admin_up_down;
-        dctx->intfcArray[dctx->num_ifs].link_up_down = reply->link_up_down;
+        thisIntfc->link_mtu = reply->link_mtu;
+        thisIntfc->admin_up_down = reply->admin_up_down;
+        thisIntfc->link_up_down = reply->link_up_down;
 
       dctx->num_ifs += 1;
     }
@@ -271,16 +282,20 @@ int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx)
   return dctx->num_ifs;
 }
 
-u32 ietf_interface_name2index(const char *name, u32* if_index)
+i32 ietf_interface_name2index(const char *name, u32* if_index)
 {
-  u32 ret = -1;
+  ARG_CHECK2(-1, name, if_index);
+
+  i32 ret = -1;
   ietf_sw_interface_dump_ctx dctx = {false, 0, 0, 0};
   vapi_msg_sw_interface_dump *dump;
   vapi_error_e rv;
   dctx.last_called = false;
+
   dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
-  dump->payload.name_filter_valid = 0;
-  memset(dump->payload.name_filter, 0, sizeof(dump->payload.name_filter));
+  dump->payload.name_filter_valid = true;
+  strncpy(dump->payload.name_filter, name, sizeof(dump->payload.name_filter));
+
   while (VAPI_EAGAIN == (rv = vapi_sw_interface_dump(g_vapi_ctx_instance, dump, ietf_sw_interface_dump_cb, &dctx)))
     ;
 
@@ -315,7 +330,7 @@ i32 ietf_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_
   vapi_error_e rv = vapi_send (g_vapi_ctx_instance, msg);
 
   vapi_msg_sw_interface_add_del_address_reply *resp;
-  
+
   SC_VPP_VAPI_RECV;
 
   vapi_msg_sw_interface_add_del_address_reply_hton(resp);

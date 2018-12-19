@@ -43,7 +43,7 @@ typedef struct _ietf_sw_interface_dump_ctx
 int ietf_initSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
 int ietf_freeSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
 int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx);
-u32 ietf_interface_name2index(const char *name, u32* if_index);
+i32 ietf_interface_name2index(const char *name, u32* if_index);
 
 i32 ietf_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_all,
 			       u8 address_length, u8 address[VPP_IP6_ADDRESS_LEN] );
