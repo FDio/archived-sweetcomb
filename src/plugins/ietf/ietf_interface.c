@@ -101,7 +101,7 @@ interface_enable_disable(const char *if_name, bool enable)
  * @brief Callback to be called by any config change of "/ietf-interfaces:interfaces/interface/enabled" leaf.
  */
 static int
-sc_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
+ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
 {
     char *if_name = NULL;
     sr_change_iter_t *iter = NULL;
@@ -180,7 +180,7 @@ interface_ipv46_config_add_remove(const char *if_name, uint8_t *addr, uint8_t pr
         return SR_ERR_OK;
     }
 }
-int sc_initSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
+int ietf_initSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
 {
   if(dctx == NULL)
     return -1;
@@ -191,7 +191,7 @@ int sc_initSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
   dctx->num_ifs = 0;
   return 0;
 }
-int sc_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
+int ietf_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
 {
   if(dctx == NULL)
     return -1;
@@ -204,7 +204,7 @@ int sc_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
   return sc_initSwInterfaceDumpCTX(dctx);
 }
 vapi_error_e
-sc_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
+ietf_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
                       vapi_error_e rv, bool is_last,
                       vapi_payload_sw_interface_details * reply)
 {
@@ -248,7 +248,7 @@ sc_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
     }
   return VAPI_OK;
 }
-int sc_swInterfaceDump(sc_sw_interface_dump_ctx * dctx)
+int ietf_swInterfaceDump(sc_sw_interface_dump_ctx * dctx)
 {
   if(dctx == NULL)
     {
@@ -265,13 +265,13 @@ int sc_swInterfaceDump(sc_sw_interface_dump_ctx * dctx)
   memset (dump->payload.name_filter, 0, sizeof (dump->payload.name_filter));
   while (VAPI_EAGAIN ==
          (rv =
-          vapi_sw_interface_dump (g_vapi_ctx_instance, dump, sc_sw_interface_dump_cb,
+          vapi_sw_interface_dump (g_vapi_ctx_instance, dump, ietf_sw_interface_dump_cb,
                                   dctx)));
 
   return dctx->num_ifs;
 }
 
-u32 sc_interface_name2index(const char *name, u32* if_index)
+u32 ietf_interface_name2index(const char *name, u32* if_index)
 {
   u32 ret = -1;
   sc_sw_interface_dump_ctx dctx = {false, 0, 0, 0};
@@ -281,7 +281,7 @@ u32 sc_interface_name2index(const char *name, u32* if_index)
   dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
   dump->payload.name_filter_valid = 0;
   memset(dump->payload.name_filter, 0, sizeof(dump->payload.name_filter));
-  while (VAPI_EAGAIN == (rv = vapi_sw_interface_dump(g_vapi_ctx_instance, dump, sc_sw_interface_dump_cb, &dctx)))
+  while (VAPI_EAGAIN == (rv = vapi_sw_interface_dump(g_vapi_ctx_instance, dump, ietf_sw_interface_dump_cb, &dctx)))
     ;
 
   int i = 0;
@@ -299,7 +299,7 @@ u32 sc_interface_name2index(const char *name, u32* if_index)
   return ret;
 }
 
-i32 sc_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_all,
+i32 ietf_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_all,
 			       u8 address_length, u8 address[VPP_IP6_ADDRESS_LEN] )
 {
   i32 ret = -1;
@@ -323,7 +323,7 @@ i32 sc_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_al
   vapi_msg_free (g_vapi_ctx_instance, resp);
   return ret;
 }
-i32 sc_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down)
+i32 ietf_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down)
 {
   i32 ret = -1;
   vapi_msg_sw_interface_set_flags *msg = vapi_alloc_sw_interface_set_flags(g_vapi_ctx_instance);
@@ -400,7 +400,7 @@ interface_ipv46_config_modify(sr_session_ctx_t *session, const char *if_name,
  * or "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address".
  */
 static int
-sc_interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
+ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
 {
     sr_change_iter_t *iter = NULL;
     sr_change_oper_t op = SR_OP_CREATED;
@@ -505,7 +505,7 @@ sc_interface_ipv46_address_change_cb(sr_session_ctx_t *session, const char *xpat
  * Does not provide any functionality, needed just to cover not supported config leaves.
  */
 static int
-sc_interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
+ietf_interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_event_t event, void *private_ctx)
 {
     SRP_LOG_DBG("'%s' modified, event=%d", xpath, event);
 
@@ -516,7 +516,7 @@ sc_interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_ev
  * @brief Callback to be called by any request for state data under "/ietf-interfaces:interfaces-state/interface" path.
  */
 static int
-sc_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, uint64_t request_id, void *private_ctx)
+ietf_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, uint64_t request_id, void *private_ctx)
 {
     sr_val_t *values_arr = NULL;
     int values_arr_size = 0, values_arr_cnt = 0;
@@ -599,7 +599,7 @@ sc_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, 
  * @brief Callback to be called by plugin daemon upon plugin load.
  */
 int
-sc_interface_subscribe_events(sr_session_ctx_t *session,
+ietf_interface_subscribe_events(sr_session_ctx_t *session,
 			      sr_subscription_ctx_t **subscription)
 {
     int rc = SR_ERR_OK;
@@ -607,31 +607,31 @@ sc_interface_subscribe_events(sr_session_ctx_t *session,
     SRP_LOG_DBG_MSG("Initializing vpp-interfaces plugin.");
 
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface",
-            sc_interface_change_cb, g_vapi_ctx_instance, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
+            ietf_interface_change_cb, g_vapi_ctx_instance, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/enabled",
-            sc_interface_enable_disable_cb, g_vapi_ctx_instance, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
+            ietf_interface_enable_disable_cb, g_vapi_ctx_instance, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address",
-            sc_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
+            ietf_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address",
-            sc_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
+            ietf_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_dp_get_items_subscribe(session, "/ietf-interfaces:interfaces-state",
-				   sc_interface_state_cb, g_vapi_ctx_instance, SR_SUBSCR_DEFAULT/*SR_SUBSCR_CTX_REUSE*/, subscription);
+				   ietf_interface_state_cb, g_vapi_ctx_instance, SR_SUBSCR_DEFAULT/*SR_SUBSCR_CTX_REUSE*/, subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
