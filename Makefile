@@ -111,6 +111,6 @@ fixstyle:
 	@build-root/scripts/checkstyle.sh --fix
 
 build_scvpp:
-	@mkdir $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake $(WS_ROOT)/src/scvpp/;make install;
+	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake $(WS_ROOT)/src/scvpp/;make install;
 build:
-	@mkdir $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake $(WS_ROOT)/src/plugins/;make install;
+	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake $(WS_ROOT)/src/plugins/;make install;
