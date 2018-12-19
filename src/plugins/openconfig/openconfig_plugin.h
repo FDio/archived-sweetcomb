@@ -66,5 +66,13 @@ struct _sys_repo_call {
 int openconfig_register_subscribe(plugin_main_t *plugin_main);
 void openconfig_unsubscribe(plugin_main_t *plugin_main);
 
+//FIXME:
+// This solution is not good and should be rewrite.
+// But first we must discuss the architecture of sweetcomb and how we should
+// register the new YANGS modules.
+// This function here is only for test.
+int openconfig_plugin_init(sr_session_ctx_t *session);
+void openconfig_plugin_cleanup();
+
 
 #endif /* __SWEETCOMB_OPENCONFIG_PLUGIN__ */

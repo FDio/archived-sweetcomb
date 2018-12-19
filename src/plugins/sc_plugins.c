@@ -41,6 +41,8 @@ DEFINE_VAPI_MSG_IDS_HC_API_JSON;
 //#include "sc_l2.h"
 //#include "sc_vxlan.h"
 
+#include "openconfig/openconfig_plugin.h"
+
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
   SC_INVOKE_BEGIN;
@@ -61,6 +63,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
   //INTERFACE
   sc_interface_subscribe_events(session, &subscription);
 
+  //Openconfig modules
+  openconfig_plugin_init(session);
+
   /* set subscription as our private context */
   *private_ctx = subscription;
   SC_INVOKE_END;
@@ -70,6 +75,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 {
   SC_INVOKE_BEGIN;
+
+  openconfig_plugin_clean();
+
   /* subscription was set as our private context */
   sr_unsubscribe(session, private_ctx);
   SC_LOG_DBG_MSG("unload plugin ok.");
