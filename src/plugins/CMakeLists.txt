@@ -42,8 +42,8 @@ target_link_libraries(bapi ${VPP_LIBRARIES})
 
 # plugins sources
 set(PLUGINS_SOURCES
-    sc_interface.c
     sc_plugins.c
+    ietf/ietf_interface.c
     openconfig/openconfig_interfaces.c
     openconfig/openconfig_local_routing.c
     openconfig/openconfig_plugin.c

@@ -18,8 +18,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "sc_interface.h"
-#include "sc_plugins.h"
+#include "ietf_interface.h"
+#include "../sc_plugins.h"
 #include <sysrepo.h>
 #include <sysrepo/plugins.h>
 #include <sysrepo/values.h>
