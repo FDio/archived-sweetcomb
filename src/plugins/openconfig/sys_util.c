@@ -15,7 +15,7 @@
  */
 
 #include "sys_util.h"
-#include "sc_vpp_operation.h"
+#include "sc_vpp_comm.h"
 
 #include <string.h>
 #include <vppinfra/types.h>

@@ -16,7 +16,7 @@
 
 #include "openconfig_local_routing.h"
 #include "sys_util.h"
-#include "sc_vpp_operation.h"
+#include "sc_vpp_comm.h"
 
 #include "../bapi/bapi.h"
 #include "../bapi/bapi_interface.h"

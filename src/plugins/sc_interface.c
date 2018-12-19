@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 
 #include "sc_interface.h"
+#include "sc_plugins.h"
 #include <sysrepo.h>
 #include <sysrepo/plugins.h>
 #include <sysrepo/values.h>
@@ -194,7 +195,6 @@ int sc_freeSwInterfaceDumpCTX(sc_sw_interface_dump_ctx * dctx)
 
   if(dctx->intfcArray != NULL)
     {
-      printf("free intfcArray %p\n", dctx->intfcArray);
       free(dctx->intfcArray);
     }
 
@@ -212,8 +212,6 @@ sc_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
     }
   else
     {
-      //printf ("Interface dump entry: [%u]: %s\n", reply->sw_if_index,
-      //              reply->interface_name);
       if(dctx->capacity == 0 && dctx->intfcArray == NULL)
         {
           dctx->capacity = 10;
@@ -318,11 +316,10 @@ u32 sc_interface_name2index(const char *name, u32* if_index)
   memset(dump->payload.name_filter, 0, sizeof(dump->payload.name_filter));
   while (VAPI_EAGAIN == (rv = vapi_sw_interface_dump(g_vapi_ctx_instance, dump, sc_sw_interface_dump_cb, &dctx)))
     ;
-  printf("interface dump over, there are %d intfc\n", dctx.num_ifs);
+
   int i = 0;
   for (; i < dctx.num_ifs; ++i)
   {
-    printf("Index[%d] %s\n", dctx.intfcArray[i].sw_if_index, dctx.intfcArray[i].interface_name);
     if (strcmp(dctx.intfcArray[i].interface_name, name) == 0)
     {
       *if_index = dctx.intfcArray[i].sw_if_index;
@@ -355,7 +352,6 @@ i32 sc_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_al
   SC_VPP_VAPI_RECV;
 
   vapi_msg_sw_interface_add_del_address_reply_hton(resp);
-  printf("addDelInterfaceAddr : %d \n", resp->payload.retval);
   ret = resp->payload.retval;
   vapi_msg_free (g_vapi_ctx_instance, resp);
   return ret;
@@ -375,7 +371,6 @@ i32 sc_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down)
   SC_VPP_VAPI_RECV;
 
   vapi_msg_sw_interface_set_flags_reply_ntoh(resp);
-  printf("setInterfaceFlags:%d \n", resp->payload.retval);
   ret = resp->payload.retval;
   vapi_msg_free (g_vapi_ctx_instance, resp);
   return ret;
@@ -554,21 +549,18 @@ sc_interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_ev
  * @brief Callback to be called by any request for state data under "/ietf-interfaces:interfaces-state/interface" path.
  */
 static int
-sc_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, void *private_ctx)
+sc_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, uint64_t request_id, void *private_ctx)
 {
     sr_val_t *values_arr = NULL;
-    size_t values_arr_size = 0, values_arr_cnt = 0;
+    int values_arr_size = 0, values_arr_cnt = 0;
     sc_sw_interface_dump_ctx dctx;
     scVppIntfc* if_details;
     int rc = 0;
 
     SRP_LOG_DBG("Requesting state data for '%s'", xpath);
-printf("%d\n", __LINE__);
-    printf("Requesting state data for '%s'\n", xpath);
 
     if (! sr_xpath_node_name_eq(xpath, "interface")) {
         /* statistics, ipv4 and ipv6 state data not supported */
-      printf("============= you want %s ?\n ", xpath);
       *values = NULL;
       *values_cnt = 0;
       return SR_ERR_OK;
@@ -589,9 +581,8 @@ printf("%d\n", __LINE__);
       sc_freeSwInterfaceDumpCTX(&dctx);
         return rc;
     }
-    printf("create %d sr vals\n", values_arr_size);
 
-    size_t i = 0;
+    int i = 0;
     for (; i < dctx.num_ifs; i++) {
         if_details = dctx.intfcArray+i;
 
@@ -599,17 +590,14 @@ printf("%d\n", __LINE__);
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/type", xpath, if_details->interface_name);
         sr_val_set_str_data(&values_arr[values_arr_cnt], SR_IDENTITYREF_T,
                 strstr((char*)if_details->interface_name, "local0") ? "iana-if-type:propVirtual" : "iana-if-type:ethernetCsmacd");
-printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
 
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/admin-status", xpath, if_details->interface_name);
         sr_val_set_str_data(&values_arr[values_arr_cnt], SR_ENUM_T, if_details->admin_up_down ? "up" : "down");
-printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
 
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/oper-status", xpath, if_details->interface_name);
         sr_val_set_str_data(&values_arr[values_arr_cnt], SR_ENUM_T, if_details->link_up_down ? "up" : "down");
-printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
 
         if (if_details->l2_address_length > 0) {
@@ -617,24 +605,20 @@ printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
             sr_val_build_str_data(&values_arr[values_arr_cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x",
                     if_details->l2_address[0], if_details->l2_address[1], if_details->l2_address[2],
                     if_details->l2_address[3], if_details->l2_address[4], if_details->l2_address[5]);
-printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
             values_arr_cnt++;
         } else {
 	  sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/phys-address", xpath, if_details->interface_name);
 	  sr_val_build_str_data(&values_arr[values_arr_cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x", 0,0,0,0,0,0);
-	  printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
 	  values_arr_cnt++;
 	}
 
         sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/speed", xpath, if_details->interface_name);
         values_arr[values_arr_cnt].type = SR_UINT64_T;
         values_arr[values_arr_cnt].data.uint64_val = if_details->link_speed;
-printf("\nset %s 's data\n",values_arr[values_arr_cnt].xpath);
         values_arr_cnt++;
     }
 
     SRP_LOG_DBG("Returning %zu state data elements for '%s'", values_arr, xpath);
-    printf("\nReturning %d  data elements for '%s'\n", values_arr_cnt, xpath);
 
     *values = values_arr;
     *values_cnt = values_arr_cnt;
@@ -687,13 +671,12 @@ sc_interface_subscribe_events(sr_session_ctx_t *session,
 
 
     SRP_LOG_INF_MSG("vpp-interfaces plugin initialized successfully.");
-    printf("vpp-interfaces plugin initialized successfully.\n");
 
     return SR_ERR_OK;
 
 error:
     SRP_LOG_ERR_MSG("Error by initialization of the sc_interfaces plugin.");
-    sr_plugin_cleanup_cb(session, g_vapi_ctx_instance);
+    sr_plugin_cleanup_cb(session, &g_vapi_ctx_instance);
     return rc;
 }
 

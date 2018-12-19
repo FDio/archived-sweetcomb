@@ -17,12 +17,12 @@ include(GNUInstallDirs)
 
 # scvpp sources
 set(SCVPP_SOURCES
-    sc_vpp_operation.c
+    sc_vpp_comm.c
 )
 
 # scvpp public headers
 set(SCVPP_HEADERS
-    sc_vpp_operation.h
+    sc_vpp_comm.h
 )
 
 set(CMAKE_C_FLAGS " -g -O0 -fpic -fPIC -std=gnu99 -Wl,-rpath-link=/usr/lib")

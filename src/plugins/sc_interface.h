@@ -16,7 +16,7 @@
 #ifndef SC_INTERFACE_H
 #define SC_INTERFACE_H
 
-#include "sc_vpp_operation.h"
+#include "sc_vpp_comm.h"
 
 #include <vapi/interface.api.vapi.h>
 
@@ -35,8 +35,8 @@ typedef struct _s_vpp_interface_
 typedef struct _sc_sw_interface_dump_ctx
 {
   u8 last_called;
-  size_t num_ifs;
-  size_t capacity;
+  int num_ifs;
+  int capacity;
   scVppIntfc * intfcArray;
 } sc_sw_interface_dump_ctx;
 

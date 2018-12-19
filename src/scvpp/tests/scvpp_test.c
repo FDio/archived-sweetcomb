@@ -19,7 +19,7 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include "sc_vpp_operation.h"
+#include "sc_vpp_comm.h"
 
 
 static int

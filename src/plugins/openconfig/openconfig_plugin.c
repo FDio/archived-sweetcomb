@@ -18,7 +18,7 @@
 #include "sys_util.h"
 #include "openconfig_interfaces.h"
 #include "openconfig_local_routing.h"
-#include "sc_vpp_operation.h"
+#include "sc_vpp_comm.h"
 
 #include <assert.h>
 #include <string.h>
