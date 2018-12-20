@@ -41,9 +41,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
   sr_subscription_ctx_t *subscription = NULL;
   int rc = SR_ERR_OK;
   rc = sc_connect_vpp();
-  if (-1 == rc)
+  if (0 != rc)
     {
-      SC_LOG_ERR("vpp connect error , with return %d.", SR_ERR_INTERNAL);
+      SC_LOG_ERR("vpp connect error , with return %d.", rc);
       return SR_ERR_INTERNAL;
     }
 
@@ -97,18 +97,14 @@ int
 subscribe_all_module_events(sr_session_ctx_t *session)
 {
   sr_plugin_init_cb(session, (void**)&subscription);
-
+  return 0;
 }
 int
 main(int argc, char **argv)
 {
   sr_conn_ctx_t *connection = NULL;
   sr_session_ctx_t *session = NULL;
-  int  time_now;
-  int  reg_time;
-  time_t now;
   int rc = SR_ERR_OK;
-  int i = 0;
 
   /* connect to vpp */
   rc = sc_connect_vpp();
@@ -142,7 +138,6 @@ main(int argc, char **argv)
   signal(SIGINT, sigint_handler);
   signal(SIGPIPE, SIG_IGN);
 
-  int loopCount = 11;
   while (!exit_application) {
     sleep(2);
   }
