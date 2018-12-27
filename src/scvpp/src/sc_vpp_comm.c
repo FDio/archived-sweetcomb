@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sc_vpp_operation.h"
+#include "sc_vpp_comm.h"
 
 #define APP_NAME "sweetcomb_vpp"
 #define MAX_OUTSTANDING_REQUESTS 4
