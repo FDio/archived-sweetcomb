@@ -65,7 +65,8 @@ help:
 	@echo " install-dep         - install software dependencies"
 	@echo " checkstyle          - check coding style"
 	@echo " fixstyle            - fix coding style"
-
+	@echo " build_scvpp         - build scvpp"
+	@echo " build               - build plugin"
 $(BR)/.deps.ok:
 ifeq ($(findstring y,$(UNATTENDED)),y)
 	make install-dep
