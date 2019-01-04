@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef SC_INTERFACE_H
-#define SC_INTERFACE_H
+#ifndef __IETF_INTERFACE_H__
+#define __IETF_INTERFACE_H__
 
 #include "sc_vpp_comm.h"
 
@@ -54,5 +54,5 @@ int
 ietf_interface_subscribe_events(sr_session_ctx_t *session,
 			      sr_subscription_ctx_t **subscription);
 
-#endif /* SC_INTERFACE_H */
+#endif /* __IETF_INTERFACE_H__ */
 

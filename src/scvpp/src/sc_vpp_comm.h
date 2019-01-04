@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef __SWEETCOMB_VPP_OPERATION__
-#define __SWEETCOMB_VPP_OPERATION__
+#ifndef __SC_VPP_COMMM_H__
+#define __SC_VPP_COMMM_H__
 #include <vapi/vapi.h>
 #include <vapi/vpe.api.vapi.h>
 DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
@@ -124,7 +124,7 @@ int sc_connect_vpp();
 int sc_disconnect_vpp();
 int sc_end_with(const char* str, const char* end);
 extern vapi_ctx_t g_vapi_ctx_instance;
-#endif //__SWEETCOMB_VPP_OPERATION__
+#endif //__SC_VPP_COMMM_H__
 
 
 
