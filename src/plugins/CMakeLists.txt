@@ -57,3 +57,4 @@ target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES} bapi)
 
 # install the plugin into plugins dir
 install(TARGETS vpp-plugins DESTINATION ${SR_PLUGINS_DIR})
+install(TARGETS bapi ${CMAKE_INSTALL_LIBDIR})

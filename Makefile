@@ -25,6 +25,7 @@ SUDO?=sudo
 ifneq ($(shell uname),Darwin)
 OS_ID        = $(shell grep '^ID=' /etc/os-release | cut -f2- -d= | sed -e 's/\"//g')
 OS_VERSION_ID= $(shell grep '^VERSION_ID=' /etc/os-release | cut -f2- -d= | sed -e 's/\"//g')
+CENTOS_GCC   = $(shell gcc --version|grep gcc|cut -f3 -d' '|cut -f1 -d'.')
 endif
 
 ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
@@ -37,12 +38,9 @@ endif
 
 DEB_DEPENDS  = curl build-essential autoconf automake ccache
 DEB_DEPENDS += bison flex libpcre3-dev libev-dev libavl-dev libprotobuf-c-dev protobuf-c-compiler libcmocka-dev
-DEB_DEPENDS += cmake ninja-build
-ifeq ($(OS_VERSION_ID),14.04)
-	DEB_DEPENDS += libssl-dev
-else
-	DEB_DEPENDS += libssl-dev
-endif
+DEB_DEPENDS += cmake ninja-build libssh-dev python-pkgconfig swig python-dev libssl-dev
+
+RPM_DEPENDS = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel cmake ninja-build libssh-devel python-pkgconfig python-devel openssl-devel  graphviz wget
 
 ifeq ($(findstring y,$(UNATTENDED)),y)
 CONFIRM=-y
@@ -51,7 +49,7 @@ endif
 
 TARGETS = sweetcomb
 
-.PHONY: help wipe wipe-release build build-release rebuild rebuild-release
+.PHONY: help install-dep install-dep-extra install-vpp checkstyle fixstyle build build-scvpp
 
 define banner
 	@echo "========================================================================"
@@ -62,11 +60,13 @@ endef
 
 help:
 	@echo "Make Targets:"
-	@echo " install-dep         - install software dependencies"
-	@echo " checkstyle          - check coding style"
-	@echo " fixstyle            - fix coding style"
-	@echo " build_scvpp         - build scvpp"
-	@echo " build               - build plugin"
+	@echo " install-dep          - install software dependencies"
+	@echo " install-dep-extra    - install software extra dependencips from source code"
+	@echo " install-vpp          - install released vpp"
+	@echo " checkstyle           - check coding style"
+	@echo " fixstyle             - fix coding style"
+	@echo " build-scvpp          - build scvpp"
+	@echo " build                - build plugin"
 $(BR)/.deps.ok:
 ifeq ($(findstring y,$(UNATTENDED)),y)
 	make install-dep
@@ -76,6 +76,7 @@ ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
 	if [ -n "$$MISSING" ] ; then \
 	  echo "\nPlease install missing packages: \n$$MISSING\n" ; \
 	  echo "by executing \"make install-dep\"\n" ; \
+	  echo "please add the full offical ubuntu source\n" ; \
 	  exit 1 ; \
 	fi ; \
 	exit 0
@@ -90,6 +91,10 @@ ifeq ($(OS_VERSION_ID),14.04)
 endif
 	@sudo -E apt-get update
 	@sudo -E apt-get $(APT_ARGS) $(CONFIRM) $(FORCE) install $(DEB_DEPENDS)
+else ifeq ($(OS_ID),centos)
+	@sudo -E yum install $(CONFIRM) $(RPM_DEPENDS) epel-release centos-release-scl devtoolset-7
+	@sudo -E yum remove -y libavl libavl-devel
+	@sudo -E yum install $(COMFIRM) http://ftp.nohats.ca/libavl/libavl-0.3.5-1.fc17.x86_64.rpm http://ftp.nohats.ca/libavl/libavl-devel-0.3.5-1.fc17.x86_64.rpm
 else
 	$(error "This option currently works only on Ubuntu, Debian, Centos or openSUSE systems")
 endif
@@ -105,13 +110,84 @@ else
 	$(shell $(BR)/scripts/version > $(BR)/scripts/.version)
 endif
 
+#  Main Dependencies:
+#  netopeer2 -> libyang
+#            -> libnetconf2 -> libyang
+#                           -> libssh
+#  sysrepo   -> libyang
+#            -> libredblack or libavl
+#            -> libev
+#            -> protobuf
+#            -> protobuf-c
+
+install-dep-extra:
+ifeq ($(OS_ID),centos)
+ifeq ($(CENTOS_GCC),4)
+	@echo "please use gcc version 7 or higher(# scl enable devtoolset-7 bash\n)"
+	@echo "exit devtoolset-7 after this step finished"
+	exit 1
+endif
+endif
+	@rm -rf $(BR)/downloads
+	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
+	\
+	&&wget https://github.com/CESNET/libyang/archive/v0.16-r3.tar.gz\
+	&&tar xvf v0.16-r3.tar.gz && cd libyang-0.16-r3 && mkdir -p build&& cd build\
+	&&cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&make &&make install&&cd ../../&& mv v0.16-r3.tar.gz libyang-0.16-r3.tar.gz\
+	\
+	&&wget https://github.com/swig/swig/archive/rel-3.0.12.tar.gz\
+	&&tar xvf rel-3.0.12.tar.gz && cd swig-rel-3.0.12\
+	&&./autogen.sh&&./configure --prefix=/usr --without-clisp --without-maximum-compile-warnings\
+	&&make&&sudo make install && sudo ldconfig&&cd ../&& mv rel-3.0.12.tar.gz swig-3.0.12.tar.gz\
+	\
+	&&wget https://github.com/CESNET/libnetconf2/archive/v0.12-r1.tar.gz\
+	&&tar xvf v0.12-r1.tar.gz && cd libnetconf2-0.12-r1 && mkdir -p build&& cd build\
+	&&cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&make&&make install&&ldconfig\
+	&&cd ../../ && mv v0.12-r1.tar.gz libnetconf2-0.12-r1.tar.gz\
+	\
+	&&wget https://github.com/sysrepo/sysrepo/archive/v0.7.7.tar.gz\
+	&&tar xvf v0.7.7.tar.gz && cd sysrepo-0.7.7 && mkdir -p build && cd build\
+	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr -DGEN_PYTHON_VERSION=2 ..\
+	&&make&&make install&&cd ../../&& mv v0.7.7.tar.gz sysrepo-0.7.7.tar.gz\
+	\
+	\
+	&&wget https://github.com/CESNET/Netopeer2/archive/v0.7-r1.tar.gz\
+	&&tar xvf v0.7-r1.tar.gz\
+	\
+	&& cd Netopeer2-0.7-r1/keystored && mkdir -p build && cd build\
+	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&make&&make install && sudo ldconfig\
+	\
+	&&cd ../../server/ && mkdir -p build && cd build\
+	&&cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&make&& make install && ldconfig\
+	\
+	&&cd ../../cli && mkdir -p build && cd build\
+	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&make&&make install && sudo ldconfig\
+	&&cd ../../../ && mv v0.7-r1.tar.gz Netopeer2-0.7-r1.tar.gz\
+
+install-vpp:
+	@echo "please install vpp as vpp's guide from source if failed"
+ifeq ($(PKG),deb)
+	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.deb.sh | sudo bash\
+	&&sudo -E apt-get $(CONFIRM) $(FORCE) install vpp vpp-lib vpp-plugins vpp-devel vpp-api-python vpp-api-lua vpp-api-java
+else ifeq ($(PKG),rpm)
+	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.rpm.sh | sudo bash
+ifeq ($(OS_ID),centos)
+	@sudo yum $(CONFIRM) $(FORCE) install vpp vpp-lib vpp-plugins vpp-devel vpp-api-python vpp-api-lua vpp-api-java
+endif
+endif
+
 checkstyle:
 	@build-root/scripts/checkstyle.sh
 
 fixstyle:
 	@build-root/scripts/checkstyle.sh --fix
 
-build_scvpp:
-	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake $(WS_ROOT)/src/scvpp/;make install;
+build-scvpp:
+	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
 build:
-	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake $(WS_ROOT)/src/plugins/;make install;
+	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/;make install;
