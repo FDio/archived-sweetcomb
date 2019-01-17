@@ -14,23 +14,36 @@
 #
 
 cmake_minimum_required(VERSION 2.8)
-project(scvpp)
+set(SONAME scvpp)
+project(${SONAME})
 
-# add subdirectories
-add_subdirectory(src)
+include(GNUInstallDirs)
 
-# enable testing if requested and possible
-SET(ENABLE_TESTS 1 CACHE BOOL "Enable unit tests.")
-if(ENABLE_TESTS)
-    find_package(CMOCKA)
-    if(CMOCKA_FOUND)
-        MESSAGE(STATUS "CMocka found, tests are enabled.")
-        enable_testing()
-        add_subdirectory(tests)
-    else(CMOCKA_FOUND)
-        MESSAGE(WARNING "CMocka not found, tests are disabled.")
-    endif(CMOCKA_FOUND)
-endif(ENABLE_TESTS)
+set(PROJECT_DESC "vpp-sysrepo integration library")
+set(PROJECT_VERSION "0.0.2")
+
+# srvpp sources
+set(SCVPP_SOURCES scvpp.c)
+
+# srvpp public headers
+set(SCVPP_HEADERS scvpp.h)
+
+set(CMAKE_C_FLAGS " -g -O0 -shared -fPIC -std=gnu99 -Wl,-rpath-link=/usr/lib")
+
+# libraries to link with
+#find_package(PkgConfig)
+#pkg_check_modules(SYSREPO REQUIRED libsysrepo)
+set(LINK_LIBRARIES sysrepo vlibmemoryclient vapiclient vppapiclient svm vppinfra pthread rt dl)
+
+# build instructions
+add_library(${SONAME} SHARED ${SCVPP_SOURCES})
+
+# linker instructions
+target_link_libraries(${SONAME} ${LINK_LIBRARIES})
+
+# install rules
+install(TARGETS ${SONAME} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES ${SCVPP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)

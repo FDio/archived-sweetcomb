@@ -1,0 +1,37 @@
+###################set interface flags###################
+<edit-config>
+  <target>
+    <running/>
+  </target>
+  <default-operation>replace</default-operation>
+  <config>
+    <sc-interface-set-flags xmlns="urn:sweetcomb:params:xml:ns:yang:vpp:interface:set-flags">
+      <sw-if-index>1</sw-if-index>
+      <admin-up-down>0</admin-up-down>
+    </sc-interface-set-flags>
+  </config>
+</edit-config>
+
+
+
+##############add del address##################
+
+<edit-config>
+  <target>
+    <running/>
+  </target>
+  <default-operation>replace</default-operation>
+  <config>
+    <sc-interface-add-del-address xmlns="urn:sweetcomb:params:xml:ns:yang:vpp:interface:add-del-address">
+      <sw-if-index>1</sw-if-index>
+      <is-add>1</is-add>
+      <is-ipv6>0</is-ipv6>
+      <del-all>0</del-all>
+      <address-length>24</address-length>
+      <address>192.168.44.11</address>
+    </sc-interface-add-del-address>
+  </config>
+</edit-config>
+
+
+

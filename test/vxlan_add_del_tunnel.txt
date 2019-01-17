@@ -1,0 +1,13 @@
+<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="3">
+  <sc-vxlan-add-del-tunnel xmlns="urn:sweetcomb:params:xml:ns:yang:vpp:vxlan:add-del">
+    <is-add>add</is-add>
+    <is-ipv6>ipv4</is-ipv6>
+    <instance>100</instance>
+    <src-address>192.168.44.2</src-address>
+    <dst-address>192.168.44.3</dst-address>
+    <encap-vrf-id>0</encap-vrf-id>
+    <decap-next-index>1</decap-next-index>
+    <vni>100</vni>
+  </sc-vxlan-add-del-tunnel>
+</rpc>
+

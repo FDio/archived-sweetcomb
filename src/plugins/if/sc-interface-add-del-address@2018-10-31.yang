@@ -1,0 +1,68 @@
+module sc-interface-add-del-address {
+	yang-version 1;
+    namespace "urn:sweetcomb:params:xml:ns:yang:vpp:interface:add-del-address";
+    prefix "sc-interface-add-del-address";
+	
+	import ietf-inet-types {
+        prefix "inet";
+    }
+
+    organization "HUACHENTEL";
+
+    description
+    "This module contains a collection of YANG definitions for
+     managing interface flags in VPP.
+
+     Copyright (c) 2018 HUACHENTEL and/or its affiliates.
+
+     Licensed under the Apache License, Version 2.0 (the 'License');
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at:
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an 'AS IS' BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.";
+
+    revision "2018-10-31" {
+        description "add | del interface addresses";
+    }
+	
+	container sc-interface-add-del-address {
+		leaf sw-if-index{
+			type uint32;
+			description "the index of a interface";
+			mandatory true;
+		}
+		leaf is-add{
+			type uint8 {
+				range "0..1";
+			}
+			default 1;
+		}
+		leaf is-ipv6{
+			type uint8 {
+				range "0..1";
+			}
+			default 0;
+		}
+		leaf del-all{
+			type uint8;
+			description "del all cur addresses";
+			default 1;
+		}
+		leaf address-length{
+			type uint8;
+			description "netmask len ";
+			default 24;
+		}
+		leaf address{
+			type inet:ip-address;
+			description "new address";
+		}
+	}
+}
+

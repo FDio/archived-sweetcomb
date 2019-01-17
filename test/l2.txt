@@ -1,0 +1,41 @@
+
+#################bridge domain add del#########
+
+<edit-config>
+  <target>
+    <running/>
+  </target>
+  <default-operation>replace</default-operation>
+  <config>
+    <sc-l2-bridge-domain-add-del xmlns="urn:sweetcomb:params:xml:ns:yang:vpp:l2:bridge-domain-add-del">
+      <bd-id>1</bd-id>
+      <flood>1</flood>
+      <uu-flood>1</uu-flood>
+      <forward>1</forward>
+      <learn>1</learn>
+      <arp-term>0</arp-term>
+      <mac-age>1</mac-age>
+      <bd-tag>1</bd-tag>
+      <is-add>1</is-add>
+    </sc-l2-bridge-domain-add-del>
+  </config>
+</edit-config>
+
+
+######################l2 interface set l2 bridge#################################
+<edit-config>
+  <target>
+    <running/>
+  </target>
+  <default-operation>replace</default-operation>
+  <config>
+    <sc-l2-interface-set-l2-bridge xmlns="urn:sweetcomb:params:xml:ns:yang:vpp:l2:interface-set-l2-bridge">
+      <rx-sw-if-index>1</rx-sw-if-index>
+      <bd-id>100</bd-id>
+      <shg>0</shg>
+      <bvi>0</bvi>
+      <enable>1</enable>
+    </sc-l2-interface-set-l2-bridge>
+  </config>
+</edit-config>
+

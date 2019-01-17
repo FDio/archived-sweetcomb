@@ -14,8 +14,7 @@
 #
 
 cmake_minimum_required(VERSION 2.8)
-project(sysrepo-plugin-sweetcomb-vpp)
+project(sweetcomb C)
 
 # add subdirectories
-add_subdirectory(scvpp)
-add_subdirectory(plugins)
+add_subdirectory(src)

@@ -1,0 +1,214 @@
+module sc-ip-add-del-route {
+	yang-version 1;
+    namespace "urn:sweetcomb:params:xml:ns:yang:vpp:ip:add-del-route";
+    prefix "sc-ip-add-del-route";
+	
+	import ietf-inet-types {
+        prefix "inet";
+    }
+
+    organization "HUACHENTEL";
+
+    description
+    "This module contains a collection of YANG definitions for
+     managing interface flags in VPP.
+
+     Copyright (c) 2018 HUACHENTEL and/or its affiliates.
+
+     Licensed under the Apache License, Version 2.0 (the 'License');
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at:
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an 'AS IS' BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.";
+
+    revision "2018-10-31" {
+        description "add | del route";
+    }
+	
+	container sc-ip-add-del-route {
+		leaf next-hop-sw-if-index{
+			type uint32;
+			description "the index of a interface";
+			default 0xFFFFFFFF;
+		}
+		leaf table-id{
+			type uint32;
+			description "";
+			default 0;
+		}
+		leaf classify-table-index{
+			type uint32;
+			description "";
+			default 0xFFFFFFFF;
+		}
+		leaf next-hop-table-id{
+			type uint32;
+			description "";
+			default 0;
+		}
+		leaf next-hop-id{
+			type uint32;
+			description "";
+			default 0xFFFFFFFF;
+		}
+		leaf is-add{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 1;
+		}
+		leaf is-drop{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 0;
+		}
+		leaf is-unreach{
+			type uint8 {
+				range "0..1";
+			}
+			description "";	
+			default 0;				
+		}
+		leaf is-prohibit{
+			type uint8 {
+				range "0..1";
+			}
+			description "";	
+			default 0;			
+		}
+		leaf is-ipv6{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 0;
+		}
+		leaf is-local{
+			type uint8 {
+				range "0..1";
+			}
+			description "";		
+			default 0;
+		}
+		leaf is-classify{
+			type uint8 {
+				range "0..1";
+			}
+			description "";		
+			default 0;
+		}
+		leaf is-multipath{
+			type uint8 {
+				range "0..1";
+			}
+			description "";		
+			default 0;
+		}
+		leaf is-resolve-host{
+			type uint8 {
+				range "0..1";
+			}
+			description "";		
+			default 0;
+		}
+		leaf is-resolve-attached{
+			type uint8 {
+				range "0..1";
+			}
+			description "";		
+			default 0;
+		}
+		leaf is-dvr{
+			type uint8 {
+				range "0..1";
+			}
+			description "";		
+			default 0;
+		}
+		leaf is-source-lookup{
+			type uint8 {
+				range "0..1";
+			}
+			description "";	
+			default 0;			
+		}
+		leaf is-udp-encap{
+			type uint8 {
+				range "0..1";
+			}
+			description "";	
+			default 0;			
+		}
+		leaf next-hop-weight{
+			type uint8;
+			description "";		
+			default 1;
+		}
+		leaf next-hop-preference{
+			type uint8;
+			description "";
+			default 0;	
+		}
+		leaf next-hop-proto{
+			type uint8;
+			description "";		
+			default 0;	
+		}
+		leaf dst-address-length{
+			type uint8;
+			description "";
+			mandatory true;
+		}
+		leaf dst-address{
+			type inet:ip-address;
+			description "";
+			mandatory true;
+		}
+		leaf next-hop-address{
+			type inet:ip-address;
+			description "";
+			mandatory true;			
+		}
+		leaf next-hop-n-out-labels{
+			type uint8;
+			description "";
+			default 0;
+		}
+		leaf next-hop-via-label{
+			type uint32;
+			description "the size of label stack";		
+			default 0x100000;	
+		}
+		list label-stack {
+			key "label";
+
+			leaf is-uniform{
+				type uint8;
+				description "";
+			}
+			leaf label{
+				type uint32;
+				description "";
+			}
+			leaf ttl{
+				type uint8;
+				description "";
+			}
+			leaf exp{
+				type uint8;
+				description "";
+			}
+		}
+		
+	}
+}
+

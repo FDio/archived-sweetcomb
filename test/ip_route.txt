@@ -1,0 +1,15 @@
+<edit-config>
+  <target>
+    <running/>
+  </target>
+  <default-operation>replace</default-operation>
+  <config>
+    <sc-ip-add-del-route xmlns="urn:sweetcomb:params:xml:ns:yang:vpp:ip:add-del-route">
+      <is-add>1</is-add>
+      <is-ipv6>0</is-ipv6>
+      <dst-address-length>24</dst-address-length>
+      <dst-address>192.168.44.3</dst-address>
+      <next-hop-address>192.168.4.1</next-hop-address>
+    </sc-ip-add-del-route>
+  </config>
+</edit-config>

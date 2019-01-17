@@ -1,0 +1,98 @@
+module sc-l2-bridge-domain-add-del {
+	yang-version 1;
+    namespace "urn:sweetcomb:params:xml:ns:yang:vpp:l2:bridge-domain-add-del";
+    prefix "sc-l2-bridge-domain-add-del";
+	
+	import ietf-inet-types {
+        prefix "inet";
+    }
+
+    organization "HUACHENTEL";
+
+    description
+    "This module contains a collection of YANG definitions for
+     managing interface flags in VPP.
+
+     Copyright (c) 2018 HUACHENTEL and/or its affiliates.
+
+     Licensed under the Apache License, Version 2.0 (the 'License');
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at:
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an 'AS IS' BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.";
+
+    revision "2018-10-31" {
+        description "bridge domain add del";
+    }
+	
+	container sc-l2-bridge-domain-add-del {
+		leaf bd-id{
+			type uint32;
+			description "the key of bridge domain";
+			mandatory true;
+		}
+		leaf flood{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 1;
+		}
+		leaf uu-flood{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 1;
+		}
+		leaf forward{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 1;
+		}
+		leaf learn{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 1;
+		}
+		leaf arp-term{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 1;
+		}
+		leaf mac-age{
+			type uint8 {
+				range "0..1";
+			}
+			description "";
+			default 1;
+		}
+		leaf bd-tag{
+			type string {
+				length "0 .. 64";
+			}
+			description " bridge tag ";
+			default "";
+		}
+		leaf is-add{
+			type uint8 {
+				range "0..1";
+			}
+			description "add or del bridge";
+			default 1;
+		}
+	}
+}
+

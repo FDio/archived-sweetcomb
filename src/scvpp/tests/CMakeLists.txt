@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-include_directories ("${PROJECT_SOURCE_DIR}/src")
+include_directories ("${PROJECT_SOURCE_DIR}")
 
 # check whether valgrind is installed
 find_program(valgrind_FOUND valgrind)
@@ -32,7 +32,7 @@ macro(ADD_UNIT_TEST TEST_NAME)
             --error-exitcode=1 --read-var-info=yes
             --leak-check=full --show-leak-kinds=all
             ./${TEST_NAME}
-        )
+		)
     endif(valgrind_FOUND)
 endmacro(ADD_UNIT_TEST)
 
