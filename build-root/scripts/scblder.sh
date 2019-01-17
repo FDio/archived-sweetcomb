@@ -30,7 +30,7 @@ scblder() {
   fi
 
   local SBLD_TOPDIR=$PWD
-  local SBLD_RELATIVE_PATH=${SBLD_TASKPATH##${SBLD_TOPDIR}/}
+  local SBLD_RELATIVE_PATH=${SBLD_TASKPATH##${SBLD_TOPDIR}/src}
 
   local BLT_DIR=$SBLD_TOPDIR/build-root/${SBLD_RELATIVE_PATH}
   [ -d $BLT_DIR ] || mkdir -p $BLT_DIR
