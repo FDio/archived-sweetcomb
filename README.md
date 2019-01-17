@@ -23,7 +23,7 @@
 
 8. The boot sequence should be : 
 	
-	`sysrepod -> sysrepo-plugind -> netopeer2-server`
+	`vpp.service -> sysrepod -> sysrepo-plugind -> netopeer2-server`
 	
    Compilation and installation of sysrepo && netopeer2 refer to :
 
