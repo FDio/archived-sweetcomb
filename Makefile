@@ -65,8 +65,8 @@ help:
 	@echo " install-dep         - install software dependencies"
 	@echo " checkstyle          - check coding style"
 	@echo " fixstyle            - fix coding style"
-	@echo " build_scvpp         - build scvpp"
-	@echo " build               - build plugin"
+	@echo " scvpp               - build scvpp"
+	@echo " plugins             - build plugins"
 $(BR)/.deps.ok:
 ifeq ($(findstring y,$(UNATTENDED)),y)
 	make install-dep
@@ -111,7 +111,9 @@ checkstyle:
 fixstyle:
 	@build-root/scripts/checkstyle.sh --fix
 
-build_scvpp:
-	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake $(WS_ROOT)/src/scvpp/;make install;
-build:
-	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake $(WS_ROOT)/src/plugins/;make install;
+scvpp:
+	@build-root/scripts/scblder.sh src/scvpp
+
+plugins:
+	@build-root/scripts/scblder.sh src/plugins
+

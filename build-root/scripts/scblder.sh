@@ -34,7 +34,6 @@ scblder() {
 
   local BLT_DIR=$SBLD_TOPDIR/build-root/${SBLD_RELATIVE_PATH}
   [ -d $BLT_DIR ] || mkdir -p $BLT_DIR
-  rm -rf $BLT_DIR/* &>/dev/null
   (
     cd $BLT_DIR
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ${SBLD_TASKPATH}
