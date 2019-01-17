@@ -106,14 +106,14 @@ else
 endif
 
 checkstyle:
-	@build-root/scripts/checkstyle.sh
+	@bash build-root/scripts/checkstyle.sh
 
 fixstyle:
-	@build-root/scripts/checkstyle.sh --fix
+	@bash build-root/scripts/checkstyle.sh --fix
 
 scvpp:
-	@build-root/scripts/scblder.sh src/scvpp
+	@bash build-root/scripts/scblder.sh src/scvpp
 
 plugins:
-	@build-root/scripts/scblder.sh src/plugins
+	@bash build-root/scripts/scblder.sh src/plugins
 
