@@ -13,6 +13,7 @@
 
 export WS_ROOT=$(CURDIR)
 export BR=$(WS_ROOT)/build-root
+export BS=$(BR)/scripts
 CCACHE_DIR?=$(BR)/.ccache
 GDB?=gdb
 PLATFORM?=sweetcomb
@@ -91,29 +92,33 @@ endif
 	@sudo -E apt-get update
 	@sudo -E apt-get $(APT_ARGS) $(CONFIRM) $(FORCE) install $(DEB_DEPENDS)
 else
+ifeq ($(filter rhel centos fedora opensuse opensuse-leap,$(OS_ID)),$(OS_ID))
+	@bash $(BS)/installDeps.sh
+else
 	$(error "This option currently works only on Ubuntu, Debian, Centos or openSUSE systems")
+endif
 endif
 
 define make
 	@make -C $(BR) PLATFORM=$(PLATFORM) TAG=$(1) $(2)
 endef
 
-$(BR)/scripts/.version:
+$(BS)/.version:
 ifneq ("$(wildcard /etc/redhat-release)","")
-	$(shell $(BR)/scripts/version rpm-string > $(BR)/scripts/.version)
+	$(shell $(BS)/version rpm-string > $(BS)/.version)
 else
-	$(shell $(BR)/scripts/version > $(BR)/scripts/.version)
+	$(shell $(BS)/version > $(BS)/.version)
 endif
 
 checkstyle:
-	@bash build-root/scripts/checkstyle.sh
+	@bash $(BS)/checkstyle.sh
 
 fixstyle:
-	@bash build-root/scripts/checkstyle.sh --fix
+	@bash $(BS)/checkstyle.sh --fix
 
 scvpp:
-	@bash build-root/scripts/scblder.sh src/scvpp
+	@bash $(BS)/scblder.sh src/scvpp
 
 plugins:
-	@bash build-root/scripts/scblder.sh src/plugins
+	@bash $(BS)/scblder.sh src/plugins
 
