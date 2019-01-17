@@ -33,18 +33,23 @@
 
 9. How to add functions?
 
-  ```c
-  //STEP1)
-  	write the yang file according to the struct in *.api.vapi.h.
+	**STEP1)**
+	 
+		write the yang file according to the struct in *.api.vapi.h.
+
+	**STEP2)**
+	 
+	 	install yang.(sysrepoctl -h)
   
-  //STEP2)
-  	install yang.(sysrepoctl -h)
+	**STEP3)**
+	 
+	 	add the file or subdir at src/plugins. 
   
-  //STEP3)
-  	add the file or subdir at src/plugins. 
-  
-  //STEP4)
-  	you can use (sh bld | sh bld -i) at top-subdir to compile and install.
-  
-  ```
+	**STEP4)**
+   	 
+	 	you can use `build-root/scripts/scblder.sh` to build something.
+
+	```BASH
+	source build-root/scripts/scblder.sh;scblder src/scvpp
+	```
 
