@@ -18,15 +18,17 @@ scblder() {
   fi
 
   local SBLD_TASKPATH=$(realpath $1)
-  if [ -f $1 ]; then
+  if [ -f $SBLD_TASKPATH ]; then
     if [ "X${SBLD_TASKPATH##*/}" == "XCMakeLists.txt" ]; then
       SBLD_TASKPATH=$(dirname $SBLD_TASKPATH)
+    else
+      echo "ERROR, please provides an available 'CMakeLists.txt' !!! "
     fi
-  elif [ -d $1 -a -e $1/CMakeLists.txt ]; then
-    SBLD_TASKPATH=$(realpath $1)
   else
-    echo "FATAL Error, you should follows a path to CMakeLists.txt !!! "
-    return
+    if [ -d $SBLD_TASKPATH -a ! -e $SBLD_TASKPATH/CMakeLists.txt ]; then
+      echo "ERROR, '$SBLD_TASKPATH' not contains CMakeLists.txt, please check and re-run !!!"
+      return
+    fi
   fi
 
   local SBLD_TOPDIR=$PWD
@@ -42,4 +44,3 @@ scblder() {
 }
 
 scblder $@
-
