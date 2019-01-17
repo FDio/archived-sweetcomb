@@ -1,5 +1,5 @@
-# Except this
+# keep all things in scripts
 !/build-root/scripts/*
-# Ignore everything in this directory
+# Ignore everything in remains
 build-root/*
 
