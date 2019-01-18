@@ -37,7 +37,7 @@ vapi_mode_e g_vapi_mode = VAPI_MODE_NONBLOCKING;
 vapi_error_e bin_api_connect(const char *client_name, vapi_mode_e vapi_mode) {
     vapi_error_e rv = vapi_ctx_alloc(&g_vapi_ctx);
     if (VAPI_OK != rv) {
-        SRP_LOG_DBG_MSG("cannot allocate context");
+        SC_LOG_DBG_MSG("cannot allocate context");
         return rv;
     }
 
@@ -45,7 +45,7 @@ vapi_error_e bin_api_connect(const char *client_name, vapi_mode_e vapi_mode) {
                     response_queue_size, vapi_mode, true);
 
     if (VAPI_OK != rv) {
-        SRP_LOG_DBG_MSG("error: connecting to vlib");
+        SC_LOG_DBG_MSG("error: connecting to vlib");
         return rv;
     }
 
@@ -58,7 +58,7 @@ vapi_error_e bin_api_connect(const char *client_name, vapi_mode_e vapi_mode) {
 vapi_error_e bin_api_disconnect(void) {
     vapi_error_e rv = vapi_disconnect (g_vapi_ctx);
     if (VAPI_OK != rv) {
-        SRP_LOG_DBG("error: (rc:%d)", rv);
+        SC_LOG_DBG("error: (rc:%d)", rv);
         //return rv;
     }
 
@@ -76,7 +76,7 @@ bool bapi_aton(const char *cp, u8 * buf)
 
     if (0 == ret)
     {
-        SRP_LOG_DBG("error: ipv4 address %s", cp);
+        SC_LOG_DBG("error: ipv4 address %s", cp);
         return false;
     }
 
@@ -96,7 +96,7 @@ vapi_retval_cb(const char* func_name, i32 retval)
 {
     if (retval)
     {
-        SRP_LOG_DBG("%s: bad retval=%d", func_name, retval);
+        SC_LOG_DBG("%s: bad retval=%d", func_name, retval);
     }
 
     return VAPI_OK;

@@ -66,7 +66,7 @@ DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
     { \
         if (NULL == (arg)) \
         { \
-            ERROR(#arg ":NULL pointer passed."); \
+            SC_LOG_ERR_MSG(#arg ":NULL pointer passed."); \
             return (retval); \
         } \
     } \

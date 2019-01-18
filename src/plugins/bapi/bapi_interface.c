@@ -52,7 +52,7 @@ get_interface_id_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
         else
         {
             assert(NULL != reply);
-            SRP_LOG_DBG("Interface dump entry: [%u]: %s\n", reply->sw_if_index,
+            SC_LOG_DBG("Interface dump entry: [%u]: %s\n", reply->sw_if_index,
             reply->interface_name);
 
             if (0 == strcmp((const char*)dctx->sw_interface_details.interface_name,
@@ -83,12 +83,12 @@ bool get_interface_id(sw_interface_details_query_t * sw_interface_details_query)
     VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx, mp, get_interface_id_cb, sw_interface_details_query));
 
     if (VAPI_OK != rv) {
-        SRP_LOG_DBG_MSG("vapi_sw_interface_dump");
+        SC_LOG_DBG_MSG("vapi_sw_interface_dump");
         return false;
     }
 
     if (!sw_interface_details_query->interface_found)
-        SRP_LOG_ERR("interface name %s: Can't find index",
+        SC_LOG_ERR("interface name %s: Can't find index",
             sw_interface_details_query->sw_interface_details.interface_name);
 
     return sw_interface_details_query->interface_found;
@@ -111,7 +111,7 @@ get_interface_name_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
         else
         {
             assert(reply && dctx);
-            SRP_LOG_DBG("Interface dump entry: [%u]: %s\n", reply->sw_if_index, reply->interface_name);
+            SC_LOG_DBG("Interface dump entry: [%u]: %s\n", reply->sw_if_index, reply->interface_name);
 
             if (dctx->sw_interface_details.sw_if_index == reply->sw_if_index)
             {
@@ -136,12 +136,12 @@ bool get_interface_name(sw_interface_details_query_t * sw_interface_details_quer
     VAPI_CALL(vapi_sw_interface_dump (g_vapi_ctx, mp, get_interface_name_cb, sw_interface_details_query));
 
     if (VAPI_OK != rv) {
-        SRP_LOG_DBG_MSG("vapi_sw_interface_dump");
+        SC_LOG_DBG_MSG("vapi_sw_interface_dump");
         return false;
     }
 
     if (!sw_interface_details_query->interface_found)
-        SRP_LOG_ERR("interface index %u: Can't find name",
+        SC_LOG_ERR("interface index %u: Can't find name",
             sw_interface_details_query->sw_interface_details.sw_if_index);
 
     return sw_interface_details_query->interface_found;
@@ -159,7 +159,7 @@ sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
     else
     {
         assert (NULL != reply);
-        SRP_LOG_DBG("Interface dump entry: [%u]: %s\n", reply->sw_if_index,
+        SC_LOG_DBG("Interface dump entry: [%u]: %s\n", reply->sw_if_index,
         reply->interface_name);
     }
 

@@ -79,7 +79,7 @@ vapi_error_e bin_api_ip_add_del_route(
 {
     ARG_CHECK4(VAPI_EINVAL, reply, dst_address, next_hop, interface_name);
 
-    SRP_LOG_DBG("Interface: %s", interface_name);
+    SC_LOG_DBG("Interface: %s", interface_name);
 
     sw_interface_details_query_t query = {0};
     sw_interface_details_query_set_name(&query, interface_name);
@@ -99,7 +99,7 @@ vapi_error_e bin_api_ip_add_del_route(
     mp->payload.dst_address_length = dst_address_length;
     mp->payload.table_id = table_id;
     mp->payload.next_hop_sw_if_index = query.sw_interface_details.sw_if_index;
-    SRP_LOG_DBG("Interface: %s, index: %d", interface_name, query.sw_interface_details.sw_if_index);
+    SC_LOG_DBG("Interface: %s, index: %d", interface_name, query.sw_interface_details.sw_if_index);
 
     if (!bapi_aton(dst_address, mp->payload.dst_address))
         return VAPI_EINVAL;
