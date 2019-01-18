@@ -67,6 +67,8 @@ help:
 	@echo " fixstyle             - fix coding style"
 	@echo " build-scvpp          - build scvpp"
 	@echo " build                - build plugin"
+	@echo " clean               - clean all build"
+	@echo " distclean           - remove all build directory"
 $(BR)/.deps.ok:
 ifeq ($(findstring y,$(UNATTENDED)),y)
 	make install-dep
@@ -191,3 +193,11 @@ build-scvpp:
 	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
 build:
 	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/;make install;
+
+clean:
+	@cd $(BR)/build-scvpp && make clean;
+	@cd $(BR)/build-plugins && make clean;
+
+distclean:
+	@rm -rf $(BR)/build-scvpp
+	@rm -rf $(BR)/build-plugins
