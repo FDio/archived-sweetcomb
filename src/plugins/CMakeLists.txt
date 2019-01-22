@@ -16,6 +16,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(sysrepo-vpp-plugins)
 
+# Cmake find modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
+
+find_package(VPP)
 find_package(PkgConfig)
 pkg_check_modules(SYSREPO REQUIRED libsysrepo)
 pkg_check_modules(SCVPP REQUIRED libscvpp)
