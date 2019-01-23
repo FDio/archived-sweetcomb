@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+set (CMAKE_INSTALL_LIBDIR "/usr/lib")
 cmake_minimum_required(VERSION 2.8)
 project(sysrepo-vpp-plugins)
 
@@ -61,4 +61,4 @@ target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES} bapi)
 
 # install the plugin into plugins dir
 install(TARGETS vpp-plugins DESTINATION ${SR_PLUGINS_DIR})
-install(TARGETS bapi ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS bapi DESTINATION ${CMAKE_INSTALL_LIBDIR})
