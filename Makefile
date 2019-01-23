@@ -38,9 +38,10 @@ endif
 
 DEB_DEPENDS  = curl build-essential autoconf automake ccache
 DEB_DEPENDS += bison flex libpcre3-dev libev-dev libavl-dev libprotobuf-c-dev protobuf-c-compiler libcmocka-dev
-DEB_DEPENDS += cmake ninja-build python-pkgconfig python-dev libssl-dev
+DEB_DEPENDS += cmake ninja-build python-pkgconfig python-dev libssl-dev indent wget
 
-RPM_DEPENDS = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++
+RPM_DEPENDS = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel
+RPM_DEPENDS = cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent
 
 ifeq ($(findstring y,$(UNATTENDED)),y)
 CONFIRM=-y
@@ -133,8 +134,8 @@ endif
 	@rm -rf $(BR)/downloads
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	\
-	&&wget https://git.libssh.org/projects/libssh.git/snapshot/libssh-0.7.5.tar.gz\
-	&&tar xvf libssh-0.7.5.tar.gz && cd libssh-0.7.5 && mkdir build && cd build\
+	&&wget https://git.libssh.org/projects/libssh.git/snapshot/libssh-0.7.7.tar.gz\
+	&&tar xvf libssh-0.7.7.tar.gz && cd libssh-0.7.7 && mkdir build && cd build\
 	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make&&sudo make install && sudo ldconfig&&cd ../../\
 	\
