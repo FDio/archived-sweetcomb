@@ -72,6 +72,7 @@ help:
 	@echo " build-plugins        - build plugins"
 	@echo " build-package        - build rpm or deb package"
 	@echo " docker               - build sweetcomb in docker enviroment"
+	@echo " docker_test          - run test in docker enviroment"
 	@echo " clean                - clean all build"
 	@echo " distclean            - remove all build directory"
 $(BR)/.deps.ok:
@@ -202,6 +203,9 @@ build-plugins:
 
 docker:
 	@build-root/scripts/docker.sh
+
+docker_test:
+	@test/run_test.sh
 
 build-package:
 	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;

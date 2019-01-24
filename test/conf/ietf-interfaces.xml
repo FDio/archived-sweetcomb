@@ -1,0 +1,14 @@
+<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+  <interface>
+    <name>local0</name>
+    <description>Ethernet 0</description>
+    <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+    <enabled>false</enabled>
+  </interface>
+  <interface>
+    <name>host-vpp1</name>
+    <description>Ethernet 1</description>
+    <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+    <enabled>false</enabled>
+  </interface>
+</interfaces>
