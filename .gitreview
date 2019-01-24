@@ -1,4 +1,5 @@
 [gerrit]
 host=gerrit.fd.io
 port=29418
-project=sweetcomb.git
+project=sweetcomb
+defaultbranch=stable/1901
