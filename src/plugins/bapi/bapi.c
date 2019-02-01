@@ -46,6 +46,7 @@ vapi_error_e bin_api_connect(const char *client_name, vapi_mode_e vapi_mode) {
 
     if (VAPI_OK != rv) {
         SC_LOG_DBG_MSG("error: connecting to vlib");
+        vapi_ctx_free(g_vapi_ctx);
         return rv;
     }
 
