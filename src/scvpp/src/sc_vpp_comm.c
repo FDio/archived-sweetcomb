@@ -32,6 +32,7 @@ int sc_connect_vpp()
 		if (rv != VAPI_OK)
 		{
 			SC_LOG_ERR("*connect %s faild,with return %d", APP_NAME, rv);
+			vapi_ctx_free(g_vapi_ctx_instance);
 			return -1;
 		}
 		SC_LOG_DBG("*connected %s ok", APP_NAME);
