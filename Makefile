@@ -97,7 +97,7 @@ endif
 else ifeq ($(OS_ID),centos)
 	@sudo -E yum install $(CONFIRM) $(RPM_DEPENDS) epel-release centos-release-scl devtoolset-7
 	@sudo -E yum remove -y libavl libavl-devel
-	@sudo -E yum install $(COMFIRM) http://ftp.nohats.ca/libavl/libavl-0.3.5-1.fc17.x86_64.rpm http://ftp.nohats.ca/libavl/libavl-devel-0.3.5-1.fc17.x86_64.rpm
+	@sudo -E yum install -y http://ftp.nohats.ca/libavl/libavl-0.3.5-1.fc17.x86_64.rpm http://ftp.nohats.ca/libavl/libavl-devel-0.3.5-1.fc17.x86_64.rpm
 else
 	$(error "This option currently works only on Ubuntu, Debian, Centos or openSUSE systems")
 endif
