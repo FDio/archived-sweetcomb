@@ -70,4 +70,3 @@ int sc_end_with(const char* str, const char* end)
 	}
 	return 0;
 }
-
