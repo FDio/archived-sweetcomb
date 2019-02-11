@@ -40,8 +40,8 @@ DEB_DEPENDS  = curl build-essential autoconf automake ccache git
 DEB_DEPENDS += bison flex libpcre3-dev libev-dev libavl-dev libprotobuf-c-dev protobuf-c-compiler libcmocka-dev
 DEB_DEPENDS += cmake ninja-build python-pkgconfig python-dev libssl-dev indent wget
 
-RPM_DEPENDS = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel
-RPM_DEPENDS = cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent git
+RPM_DEPENDS  = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel
+RPM_DEPENDS += cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent git
 
 ifeq ($(findstring y,$(UNATTENDED)),y)
 CONFIRM=-y
