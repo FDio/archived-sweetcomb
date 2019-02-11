@@ -36,12 +36,12 @@ endif
 
 # +libganglia1-dev if building the gmond plugin
 
-DEB_DEPENDS  = curl build-essential autoconf automake ccache
+DEB_DEPENDS  = curl build-essential autoconf automake ccache git
 DEB_DEPENDS += bison flex libpcre3-dev libev-dev libavl-dev libprotobuf-c-dev protobuf-c-compiler libcmocka-dev
 DEB_DEPENDS += cmake ninja-build python-pkgconfig python-dev libssl-dev indent wget
 
 RPM_DEPENDS = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel
-RPM_DEPENDS = cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent
+RPM_DEPENDS = cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent git
 
 ifeq ($(findstring y,$(UNATTENDED)),y)
 CONFIRM=-y
@@ -124,13 +124,6 @@ endif
 #            -> protobuf-c
 
 install-dep-extra:
-ifeq ($(OS_ID),centos)
-ifeq ($(CENTOS_GCC),4)
-	@echo "please use gcc version 7 or higher(# scl enable devtoolset-7 bash\n)"
-	@echo "exit devtoolset-7 after this step finished"
-	exit 1
-endif
-endif
 	@rm -rf $(BR)/downloads
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	\
@@ -149,11 +142,11 @@ endif
 	&&./autogen.sh&&./configure --prefix=/usr --without-clisp --without-maximum-compile-warnings\
 	&&make&&sudo make install && sudo ldconfig&&cd ../&& mv rel-3.0.12.tar.gz swig-3.0.12.tar.gz\
 	\
-	&&wget https://github.com/CESNET/libnetconf2/archive/v0.12-r1.tar.gz\
-	&&tar xvf v0.12-r1.tar.gz && cd libnetconf2-0.12-r1 && mkdir -p build&& cd build\
+	&&git clone https://github.com/CESNET/libnetconf2.git&&cd libnetconf2\
+	&&git checkout 7e5f7b05f10cb32a546c42355481c7d87e0409b8&& mkdir -p build&& cd build\
 	&&cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make&&make install&&ldconfig\
-	&&cd ../../ && mv v0.12-r1.tar.gz libnetconf2-0.12-r1.tar.gz\
+	&&cd ../../\
 	\
 	&&wget https://github.com/sysrepo/sysrepo/archive/v0.7.7.tar.gz\
 	&&tar xvf v0.7.7.tar.gz && cd sysrepo-0.7.7 && mkdir -p build && cd build\
