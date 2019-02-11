@@ -178,7 +178,7 @@ ifeq ($(PKG),deb)
 else ifeq ($(PKG),rpm)
 	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.rpm.sh | sudo bash
 ifeq ($(OS_ID),centos)
-	@sudo yum $(CONFIRM) $(FORCE) install vpp vpp-lib vpp-plugins vpp-devel vpp-api-python vpp-api-lua vpp-api-java
+	@sudo yum $(CONFIRM) install vpp vpp-lib vpp-plugins vpp-devel vpp-api-python vpp-api-lua vpp-api-java
 endif
 endif
 
