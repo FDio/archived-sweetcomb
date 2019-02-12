@@ -50,7 +50,7 @@ endif
 
 TARGETS = sweetcomb
 
-.PHONY: help install-dep install-dep-extra install-vpp checkstyle fixstyle build build-scvpp
+.PHONY: help install-dep install-dep-extra install-vpp checkstyle fixstyle build-plugins build-scvpp build-package
 
 define banner
 	@echo "========================================================================"
@@ -67,9 +67,10 @@ help:
 	@echo " checkstyle           - check coding style"
 	@echo " fixstyle             - fix coding style"
 	@echo " build-scvpp          - build scvpp"
-	@echo " build                - build plugin"
-	@echo " clean               - clean all build"
-	@echo " distclean           - remove all build directory"
+	@echo " build-plugins        - build plugins"
+	@echo " build-package        - build rpm or deb package"
+	@echo " clean                - clean all build"
+	@echo " distclean            - remove all build directory"
 $(BR)/.deps.ok:
 ifeq ($(findstring y,$(UNATTENDED)),y)
 	make install-dep
@@ -190,9 +191,12 @@ fixstyle:
 
 build-scvpp:
 	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
-build:
+
+build-plugins:
 	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/;make install;
 
+build-package:
+	@mkdir -p $(BR)/build-package/;cd $(BR)/build-package/;cmake $(WS_ROOT)/src/;make package;
 clean:
 	@cd $(BR)/build-scvpp && make clean;
 	@cd $(BR)/build-plugins && make clean;
@@ -200,3 +204,4 @@ clean:
 distclean:
 	@rm -rf $(BR)/build-scvpp
 	@rm -rf $(BR)/build-plugins
+	@rm -rf $(BR)/build-package
