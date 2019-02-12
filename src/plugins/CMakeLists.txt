@@ -11,17 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-# set compiler options
+
+cmake_minimum_required(VERSION 2.8)
+project(sysrepo-vpp-plugins)
+
+# set compiler option
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_C_FLAGS "-Wall -std=gnu99")
 set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2")
 set(CMAKE_C_FLAGS_DEBUG   "-g -O0")
 set (CMAKE_INSTALL_LIBDIR "/usr/lib")
-
-cmake_minimum_required(VERSION 2.8)
-project(sysrepo-vpp-plugins)
 
 # Cmake find modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
