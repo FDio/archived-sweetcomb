@@ -174,10 +174,10 @@ install-dep-extra:
 install-vpp:
 	@echo "please install vpp as vpp's guide from source if failed"
 ifeq ($(PKG),deb)
-	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.deb.sh | sudo bash\
-	&&sudo -E apt-get $(CONFIRM) $(FORCE) install vpp vpp-lib vpp-plugin* vpp-dev
+#	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.deb.sh | sudo bash
+	@sudo -E apt-get $(CONFIRM) $(FORCE) install vpp vpp-lib vpp-plugin-* vpp-dev
 else ifeq ($(PKG),rpm)
-	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.rpm.sh | sudo bash
+#	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.rpm.sh | sudo bash
 ifeq ($(OS_ID),centos)
 	@sudo yum $(CONFIRM) install vpp vpp-lib vpp-plugin* vpp-devel
 endif
