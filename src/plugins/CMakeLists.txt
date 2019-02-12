@@ -15,7 +15,7 @@
 
 # set compiler options
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -std=gnu99")
+set(CMAKE_C_FLAGS "-Wall -std=gnu99")
 set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2")
 set(CMAKE_C_FLAGS_DEBUG   "-g -O0")
 set (CMAKE_INSTALL_LIBDIR "/usr/lib")
