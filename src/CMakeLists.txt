@@ -14,7 +14,9 @@
 #
 
 cmake_minimum_required(VERSION 2.8)
-project(sysrepo-vpp)
+project(sweetcomb)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
 
 include(GNUInstallDirs)
 
@@ -33,3 +35,6 @@ set(CMAKE_C_FLAGS_DEBUG   "-g -O0")
 # add subdirectories
 add_subdirectory(scvpp)
 add_subdirectory(plugins)
+
+include(Packager)
+make_packages()
