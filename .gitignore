@@ -3,3 +3,12 @@ build-root/*
 # Except this
 !/build-root/scripts
 !/build-root/scripts/*
+
+# OSX and some IDE
+.DS_Store
+.idea/
+.project
+.cproject
+.pydevproject
+.vscode/
+
