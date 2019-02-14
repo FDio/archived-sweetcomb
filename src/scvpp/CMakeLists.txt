@@ -36,5 +36,5 @@ find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
     # generate and install pkg-config file
     configure_file("libscvpp.pc.in" "libscvpp.pc" @ONLY)
-    #install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libscvpp.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libscvpp.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 endif()

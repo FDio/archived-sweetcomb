@@ -29,7 +29,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 find_package(VPP)
 find_package(PkgConfig)
 pkg_check_modules(SYSREPO REQUIRED libsysrepo)
-pkg_check_modules(SCVPP REQUIRED libscvpp)
+#pkg_check_modules(SCVPP REQUIRED libscvpp)
 
 # get sysrepo plugins directory from pkgconfig
 if (NOT SR_PLUGINS_DIR)
