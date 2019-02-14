@@ -19,7 +19,6 @@
 #define __BAPI_H__
 
 
-#include "sc_vpp_comm.h"
 #include <vapi/vapi.h>
 #include <vapi/vapi_common.h>
 #include <vapi/vpe.api.vapi.h>
