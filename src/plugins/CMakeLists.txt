@@ -64,6 +64,7 @@ set(PLUGINS_SOURCES
 
 # build the source code into shared library
 add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
+ADD_DEPENDENCIES(vpp-plugins scvpp)
 target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES} bapi)
 
 # install the plugin into plugins dir
