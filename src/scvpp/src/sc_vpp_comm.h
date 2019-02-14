@@ -17,12 +17,15 @@
 #ifndef __SC_VPP_COMMM_H__
 #define __SC_VPP_COMMM_H__
 #include <vapi/vapi.h>
+#include <vapi/vapi_common.h>
 #include <vapi/vpe.api.vapi.h>
 DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
 
 #include <sysrepo.h>
 #include <sysrepo/values.h>
 #include <sysrepo/plugins.h>   //for SC_LOG_DBG
+
+extern vapi_mode_e g_vapi_mode;
 
 #define VPP_INTFC_NAME_LEN 64
 #define VPP_TAPV2_NAME_LEN VPP_INTFC_NAME_LEN
@@ -61,6 +64,7 @@ DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
 #define SC_INVOKE_END   SC_LOG_DBG("inovke %s end,with return OK.",SC_THIS_FUNC);
 #define SC_INVOKE_ENDX(...)  SC_LOG_DBG("inovke %s end,with %s.",SC_THIS_FUNC, ##__VA_ARGS__)
 
+/**********************************MACROS**********************************/
 #define ARG_CHECK(retval, arg) \
     do \
     { \
@@ -117,6 +121,51 @@ do { \
 		return rc; \
 	} \
 } while(0);
+
+#define VAPI_RETVAL_CB(api_name) \
+static vapi_error_e \
+api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
+                vapi_payload_##api_name##_reply * reply) \
+{ \
+    return vapi_retval_cb(__FUNCTION__, reply->retval); \
+}
+
+#define VAPI_COPY_CB(api_name) \
+static vapi_error_e \
+api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
+                vapi_payload_##api_name##_reply * reply) \
+{ \
+    if (caller_ctx) \
+    { \
+        vapi_payload_##api_name##_reply * passed = (vapi_payload_##api_name##_reply *)caller_ctx; \
+        *passed = *reply; \
+    } \
+    return VAPI_OK; \
+}\
+
+#define VAPI_CALL_MODE(call_code, vapi_mode) \
+    do \
+    { \
+        if (VAPI_MODE_BLOCKING == (vapi_mode)) \
+        { \
+            rv = call_code; \
+        } \
+        else \
+        { \
+            while (VAPI_EAGAIN == (rv = call_code)); \
+            rv = vapi_dispatch (g_vapi_ctx_instance); \
+        } \
+    } \
+    while (0)
+
+#define VAPI_CALL(call_code) VAPI_CALL_MODE(call_code, g_vapi_mode)
+
+//returns true on success
+bool sc_aton(const char *cp, u8 * buf, size_t length);
+char * sc_ntoa(const u8 * buf);
+
+vapi_error_e
+vapi_retval_cb(const char* func_name, i32 retval);
 
 ///////////////////////////
 //VPP接口

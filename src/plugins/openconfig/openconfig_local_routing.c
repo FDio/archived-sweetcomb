@@ -17,10 +17,8 @@
 #include "openconfig_local_routing.h"
 #include "sys_util.h"
 #include "sc_vpp_comm.h"
-
-#include "../bapi/bapi.h"
-#include "../bapi/bapi_interface.h"
-#include "../bapi/bapi_ip.h"
+#include "sc_vpp_interface.h"
+#include "sc_vpp_ip.h"
 
 #include <assert.h>
 #include <string.h>
@@ -420,7 +418,8 @@ bool address_prefix_init(address_prefix_t* address_prefix, char* str_prefix)
         return false;
     }
 
-    return bapi_aton(str_prefix, address_prefix->address);
+    return sc_aton(str_prefix, address_prefix->address,
+                     sizeof(address_prefix->address));
 }
 
 // XPATH: /openconfig-local-routing:local-routes/static-routes/static/state
@@ -443,7 +442,7 @@ int openconfig_local_routing_local_routes_static_routes_static_state_vapi_cb(
 
     //Filling the structure
     snprintf(address_prefix, sizeof(address_prefix), "%s/%u",
-             bapi_ntoa(reply->address), reply->address_length);
+             sc_ntoa(reply->address), reply->address_length);
 
     sr_val_build_xpath(&vals[0], "%s/prefix",
                        sysr_ip_fib_details_ctx->sysr_values_ctx.xpath_root);
@@ -482,6 +481,7 @@ ip_routing_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
 int openconfig_local_routing_local_routes_static_routes_static_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
     __attribute__((unused)) uint64_t request_id,
+    __attribute__((unused)) const char *original_xpath,
     __attribute__((unused)) void *private_ctx)
 {
     sr_xpath_ctx_t state = {0};
@@ -510,9 +510,9 @@ int openconfig_local_routing_local_routes_static_routes_static_state_cb(
     }
 
 
-    vapi_msg_ip_fib_dump *mp = vapi_alloc_ip_fib_dump (g_vapi_ctx);
+    vapi_msg_ip_fib_dump *mp = vapi_alloc_ip_fib_dump (g_vapi_ctx_instance);
 
-    VAPI_CALL(vapi_ip_fib_dump(g_vapi_ctx, mp, ip_routing_dump_cb, &dctx));
+    VAPI_CALL(vapi_ip_fib_dump(g_vapi_ctx_instance, mp, ip_routing_dump_cb, &dctx));
     if(VAPI_OK != rv)
     {
         SRP_LOG_ERR_MSG("VAPI call failed");
@@ -550,7 +550,7 @@ int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_ho
     sr_val_set_str_data(&vals[0], SR_STRING_T,
                         sysr_ip_fib_details_ctx->next_hop_index);
 
-    strncpy(next_hop, bapi_ntoa(reply->next_hop), sizeof(next_hop));
+    strncpy(next_hop, sc_ntoa(reply->next_hop), sizeof(next_hop));
     sr_val_build_xpath(&vals[1], "%s/next-hop", sysr_ip_fib_details_ctx->sysr_values_ctx.xpath_root);
     sr_val_set_str_data(&vals[1], SR_STRING_T, next_hop);
 
@@ -683,8 +683,8 @@ int next_hop_inner(
         return SR_ERR_INVAL_ARG;
     }
 
-    vapi_msg_ip_fib_dump *mp = vapi_alloc_ip_fib_dump (g_vapi_ctx);
-    VAPI_CALL(vapi_ip_fib_dump(g_vapi_ctx, mp, ip_routing_next_hop_dump_cb, &dctx));
+    vapi_msg_ip_fib_dump *mp = vapi_alloc_ip_fib_dump (g_vapi_ctx_instance);
+    VAPI_CALL(vapi_ip_fib_dump(g_vapi_ctx_instance, mp, ip_routing_next_hop_dump_cb, &dctx));
     if (VAPI_OK != rv)
     {
         SRP_LOG_ERR_MSG("VAPI call failed");
@@ -715,7 +715,7 @@ int next_hop_inner(
 
 int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx)
+    uint64_t request_id, const char *original_xpath, void *private_ctx)
 {
     return next_hop_inner(false, xpath, values, values_cnt, request_id,
                           private_ctx);
@@ -723,7 +723,7 @@ int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_ho
 
 int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_interface_ref_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx)
+    uint64_t request_id, const char *original_xpath, void *private_ctx)
 {
     return next_hop_inner(true, xpath, values, values_cnt, request_id,
                           private_ctx);

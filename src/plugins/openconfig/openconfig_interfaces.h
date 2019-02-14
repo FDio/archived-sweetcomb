@@ -31,15 +31,15 @@ int openconfig_interfaces_interfaces_interface_config_cb(
 
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx);
+    uint64_t request_id, const char *original_xpath, void *private_ctx);
 
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx);
+    uint64_t request_id, const char *original_xpath, void *private_ctx);
 
 int openconfig_interfaces_interfaces_interface_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx);
+    uint64_t request_id, const char *original_xpath, void *private_ctx);
 
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_config_cb(
     sr_session_ctx_t *ds, const char *xpath, sr_notif_event_t event,

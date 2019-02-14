@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "bapi_interface.h"
+#include "sc_vpp_interface.h"
 
 #include <assert.h>
 #include <stdbool.h>
 #include <vapi/l2.api.vapi.h>
 
-#include "bapi.h"
+#include "sc_vpp_comm.h"
 
 DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON
 
@@ -72,7 +72,7 @@ bool get_interface_id(sw_interface_details_query_t * sw_interface_details_query)
     ARG_CHECK(false, sw_interface_details_query);
     sw_interface_details_query->interface_found = false;
 
-    vapi_msg_sw_interface_dump *mp = vapi_alloc_sw_interface_dump (g_vapi_ctx);
+    vapi_msg_sw_interface_dump *mp = vapi_alloc_sw_interface_dump (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     mp->payload.name_filter_valid = true;
@@ -80,7 +80,7 @@ bool get_interface_id(sw_interface_details_query_t * sw_interface_details_query)
            sizeof(mp->payload.name_filter));
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx, mp, get_interface_id_cb, sw_interface_details_query));
+    VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx_instance, mp, get_interface_id_cb, sw_interface_details_query));
 
     if (VAPI_OK != rv) {
         SC_LOG_DBG_MSG("vapi_sw_interface_dump");
@@ -129,11 +129,11 @@ bool get_interface_name(sw_interface_details_query_t * sw_interface_details_quer
     ARG_CHECK(false, sw_interface_details_query);
     sw_interface_details_query->interface_found = false;
 
-    vapi_msg_sw_interface_dump *mp = vapi_alloc_sw_interface_dump (g_vapi_ctx);
+    vapi_msg_sw_interface_dump *mp = vapi_alloc_sw_interface_dump (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_sw_interface_dump (g_vapi_ctx, mp, get_interface_name_cb, sw_interface_details_query));
+    VAPI_CALL(vapi_sw_interface_dump (g_vapi_ctx_instance, mp, get_interface_name_cb, sw_interface_details_query));
 
     if (VAPI_OK != rv) {
         SC_LOG_DBG_MSG("vapi_sw_interface_dump");
@@ -168,7 +168,7 @@ sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
 
 vapi_error_e bin_api_sw_interface_dump(const char * interface_name)
 {
-    vapi_msg_sw_interface_dump *mp = vapi_alloc_sw_interface_dump (g_vapi_ctx);
+    vapi_msg_sw_interface_dump *mp = vapi_alloc_sw_interface_dump (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     if (NULL != interface_name)
@@ -183,7 +183,7 @@ vapi_error_e bin_api_sw_interface_dump(const char * interface_name)
     }
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_sw_interface_dump (g_vapi_ctx, mp, sw_interface_dump_cb, NULL));
+    VAPI_CALL(vapi_sw_interface_dump (g_vapi_ctx_instance, mp, sw_interface_dump_cb, NULL));
 
     return rv;
 }
@@ -193,14 +193,14 @@ VAPI_RETVAL_CB(sw_interface_set_flags);
 
 vapi_error_e bin_api_sw_interface_set_flags(uint32_t if_index, uint8_t up)
 {
-    vapi_msg_sw_interface_set_flags *mp = vapi_alloc_sw_interface_set_flags (g_vapi_ctx);
+    vapi_msg_sw_interface_set_flags *mp = vapi_alloc_sw_interface_set_flags (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     mp->payload.sw_if_index = if_index;
     mp->payload.admin_up_down = up;
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_sw_interface_set_flags(g_vapi_ctx, mp, sw_interface_set_flags_cb, NULL));
+    VAPI_CALL(vapi_sw_interface_set_flags(g_vapi_ctx_instance, mp, sw_interface_set_flags_cb, NULL));
 
     return rv;
 }
@@ -211,7 +211,7 @@ vapi_error_e bin_api_sw_interface_set_l2_bridge(u32 bd_id, u32 rx_sw_if_index,
                                                 bool enable)
 {
     vapi_msg_sw_interface_set_l2_bridge *mp =
-                                    vapi_alloc_sw_interface_set_l2_bridge (g_vapi_ctx);
+                                    vapi_alloc_sw_interface_set_l2_bridge (g_vapi_ctx_instance);
     assert(NULL != mp);
     //set interface l2 bridge <interface> <bridge-domain-id> [bvi|uu-fwd] [shg]
     /*
@@ -228,7 +228,7 @@ vapi_error_e bin_api_sw_interface_set_l2_bridge(u32 bd_id, u32 rx_sw_if_index,
     mp->payload.rx_sw_if_index = rx_sw_if_index;
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_sw_interface_set_l2_bridge (g_vapi_ctx, mp,
+    VAPI_CALL(vapi_sw_interface_set_l2_bridge (g_vapi_ctx_instance, mp,
                                         sw_interface_set_l2_bridge_cb, NULL));
 
     return rv;
@@ -240,13 +240,13 @@ vapi_error_e bin_api_create_loopback(vapi_payload_create_loopback_reply *reply)
 {
     ARG_CHECK(VAPI_EINVAL, reply);
 
-    vapi_msg_create_loopback *mp = vapi_alloc_create_loopback (g_vapi_ctx);
+    vapi_msg_create_loopback *mp = vapi_alloc_create_loopback (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     //mp->payload.mac_address =
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_create_loopback (g_vapi_ctx, mp, create_loopback_cb, reply));
+    VAPI_CALL(vapi_create_loopback (g_vapi_ctx_instance, mp, create_loopback_cb, reply));
 
     return rv;
 }

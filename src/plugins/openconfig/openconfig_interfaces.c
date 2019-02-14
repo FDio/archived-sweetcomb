@@ -17,10 +17,8 @@
 #include "openconfig_interfaces.h"
 #include "sys_util.h"
 #include "sc_vpp_comm.h"
-
-#include "../bapi/bapi.h"
-#include "../bapi/bapi_interface.h"
-#include "../bapi/bapi_ip.h"
+#include "sc_vpp_interface.h"
+#include "sc_vpp_ip.h"
 
 #include <assert.h>
 #include <string.h>
@@ -211,7 +209,7 @@ int openconfig_interface_mod_cb(
     __attribute__((unused)) sr_notif_event_t event,
     __attribute__((unused)) void *private_ctx)
 {
-    SRP_LOG_DBG("Inerafce module subscribe: %s", module_name);
+    SRP_LOG_INF("Module subscribe: %s", module_name);
 
     return SR_ERR_OK;
 }
@@ -437,13 +435,13 @@ static vapi_error_e sysr_sw_interface_dump(sys_sw_interface_dump_ctx * dctx)
 {
     ARG_CHECK(VAPI_EINVAL, dctx);
 
-    vapi_msg_sw_interface_dump *dump = vapi_alloc_sw_interface_dump(g_vapi_ctx);
+    vapi_msg_sw_interface_dump *dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
     vapi_error_e rv;
 
     dump->payload.name_filter_valid = true;
     strcpy((char*)dump->payload.name_filter, (const char *)dctx->sw_interface_details_query.sw_interface_details.interface_name);
 
-    VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx, dump, sw_interface_dump_vapi_cb,
+    VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx_instance, dump, sw_interface_dump_vapi_cb,
                                      dctx));
 
     if (VAPI_OK != rv) {
@@ -455,7 +453,9 @@ static vapi_error_e sysr_sw_interface_dump(sys_sw_interface_dump_ctx * dctx)
 
 int openconfig_interfaces_interfaces_interface_state_cb(
     const char *xpath, sr_val_t **values,
-    size_t *values_cnt, uint64_t request_id,
+    size_t *values_cnt,
+    __attribute__((unused)) uint64_t request_id,
+    __attribute__((unused)) const char *original_xpath,
     __attribute__((unused)) void *private_ctx)
 {
     sr_xpath_ctx_t state = {0};
@@ -515,7 +515,7 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
         return rc;
     }
 
-    char * address_ip = bapi_ntoa(reply->ip);
+    char * address_ip = sc_ntoa(reply->ip);
 
     sr_val_build_xpath(&vals[0], "%s/openconfig-if-ip:ip",
                        sysr_values_ctx->xpath_root);
@@ -556,7 +556,7 @@ ip_address_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
         printf ("ip address dump entry:"
                     "\tsw_if_index[%u]"
                     "\tip[%s/%u]\n"
-                    , reply->sw_if_index, bapi_ntoa(reply->ip),
+                    , reply->sw_if_index, sc_ntoa(reply->ip),
                 reply->prefix_length);
 
         openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_vapi_cb(reply, dctx);
@@ -569,6 +569,7 @@ ip_address_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
     __attribute__((unused)) uint64_t request_id,
+    __attribute__((unused)) const char *original_xpath,
     __attribute__((unused)) void *private_ctx)
 {
     sr_xpath_ctx_t state = {0};
@@ -619,11 +620,11 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
         return SR_ERR_INVAL_ARG;
     }
 
-    vapi_msg_ip_address_dump *mp = vapi_alloc_ip_address_dump (g_vapi_ctx);
+    vapi_msg_ip_address_dump *mp = vapi_alloc_ip_address_dump (g_vapi_ctx_instance);
     mp->payload.sw_if_index = query.sw_interface_details.sw_if_index;
     mp->payload.is_ipv6 = 0;
 
-    rv = vapi_ip_address_dump(g_vapi_ctx, mp, ip_address_dump_cb, &dctx);
+    rv = vapi_ip_address_dump(g_vapi_ctx_instance, mp, ip_address_dump_cb, &dctx);
     if (VAPI_OK != rv)
     {
         SRP_LOG_ERR_MSG("VAPI call failed");
@@ -640,6 +641,7 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
     __attribute__((unused)) uint64_t request_id,
+    __attribute__((unused)) const char *original_xpath,
     __attribute__((unused)) void *private_ctx)
 {
     sr_xpath_ctx_t state = {0};
@@ -692,7 +694,7 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_
     return SR_ERR_OK;
 }
 
-VAPI_RETVAL_CB(sw_interface_add_del_address);
+// VAPI_RETVAL_CB(sw_interface_add_del_address);
 
 static int oi_int_ipv4_conf(const char *interface_name,
                             const char *address_ip, u8 prefix_length,

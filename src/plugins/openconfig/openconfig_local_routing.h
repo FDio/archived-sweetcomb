@@ -34,14 +34,14 @@ int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_ho
 
 int openconfig_local_routing_local_routes_static_routes_static_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx);
+    uint64_t request_id, const char *original_xpath, void *private_ctx);
 
 int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx);
+    uint64_t request_id, const char *original_xpath, void *private_ctx);
 
 int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_interface_ref_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, void *private_ctx);
+    uint64_t request_id, const char *original_xpath, void *private_ctx);
 
 #endif /* __OPENCONFIG_LOCAL_ROUTING_H__ */

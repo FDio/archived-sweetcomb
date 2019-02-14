@@ -14,11 +14,18 @@
  */
 #include "sc_vpp_comm.h"
 
+#include <assert.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #define APP_NAME "sweetcomb_vpp"
 #define MAX_OUTSTANDING_REQUESTS 4
 #define RESPONSE_QUEUE_SIZE 2
 
 vapi_ctx_t g_vapi_ctx_instance = NULL;
+vapi_mode_e g_vapi_mode = VAPI_MODE_NONBLOCKING;
 //////////////////////////
 
 int sc_connect_vpp()
@@ -72,4 +79,44 @@ int sc_end_with(const char* str, const char* end)
 	return 0;
 }
 
+bool sc_aton(const char *cp, u8 * buf, size_t length)
+{
+    ARG_CHECK2(false, cp, buf);
 
+    struct in_addr addr;
+    int ret = inet_aton(cp, &addr);
+
+    if (0 == ret)
+    {
+        SC_LOG_DBG("error: ipv4 address %s", cp);
+        return false;
+    }
+
+    if (sizeof(addr) > length) {
+        SC_LOG_DBG_MSG("error: small buffer");
+        return false;
+    }
+
+    memcpy(buf, &addr, sizeof (addr));
+    return true;
+}
+
+char* sc_ntoa(const u8 * buf)
+{
+    ARG_CHECK(NULL, buf);
+
+    struct in_addr addr;
+    memcpy(&addr, buf, sizeof(addr));
+    return inet_ntoa(addr);
+}
+
+vapi_error_e
+vapi_retval_cb(const char* func_name, i32 retval)
+{
+    if (retval)
+    {
+        SC_LOG_DBG("%s: bad retval=%d", func_name, retval);
+    }
+
+    return VAPI_OK;
+}

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "bapi_ip.h"
-#include "bapi.h"
+#include "sc_vpp_comm.h"
+#include "sc_vpp_ip.h"
 
-#include "bapi_interface.h"
+#include "sc_vpp_interface.h"
 
 #include <assert.h>
 
@@ -32,18 +32,19 @@ bin_api_sw_interface_add_del_address(u32 sw_if_index, bool is_add,
     ARG_CHECK(VAPI_EINVAL, ip_address);
 
     vapi_msg_sw_interface_add_del_address *mp =
-                                vapi_alloc_sw_interface_add_del_address (g_vapi_ctx);
+                                vapi_alloc_sw_interface_add_del_address (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     mp->payload.sw_if_index = sw_if_index;
     mp->payload.is_add = is_add;
     mp->payload.is_ipv6 = 0;
     mp->payload.address_length = address_length;
-    if (!bapi_aton(ip_address, mp->payload.address))
+    if (!sc_aton(ip_address, mp->payload.address,
+        sizeof(mp->payload.address)))
         return VAPI_EINVAL;
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_sw_interface_add_del_address (g_vapi_ctx, mp, sw_interface_add_del_address_cb, NULL));
+    VAPI_CALL(vapi_sw_interface_add_del_address (g_vapi_ctx_instance, mp, sw_interface_add_del_address_cb, NULL));
 
     return rv;
 }
@@ -52,7 +53,7 @@ vapi_error_e
 bin_api_sw_interface_del_all_address(u32 sw_if_index)
 {
     vapi_msg_sw_interface_add_del_address *mp =
-                                vapi_alloc_sw_interface_add_del_address (g_vapi_ctx);
+                                vapi_alloc_sw_interface_add_del_address (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     mp->payload.sw_if_index = sw_if_index;
@@ -60,7 +61,7 @@ bin_api_sw_interface_del_all_address(u32 sw_if_index)
     mp->payload.del_all = 1;
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_sw_interface_add_del_address (g_vapi_ctx, mp,
+    VAPI_CALL(vapi_sw_interface_add_del_address (g_vapi_ctx_instance, mp,
                                         sw_interface_add_del_address_cb, NULL));
 
     return rv;
@@ -89,7 +90,7 @@ vapi_error_e bin_api_ip_add_del_route(
         return VAPI_EINVAL;
     }
 
-    vapi_msg_ip_add_del_route *mp = vapi_alloc_ip_add_del_route (g_vapi_ctx, 1);
+    vapi_msg_ip_add_del_route *mp = vapi_alloc_ip_add_del_route (g_vapi_ctx_instance, 1);
     assert(NULL != mp);
 
     //ip route add 2.2.2.2/24 via 5.5.5.5
@@ -101,13 +102,15 @@ vapi_error_e bin_api_ip_add_del_route(
     mp->payload.next_hop_sw_if_index = query.sw_interface_details.sw_if_index;
     SC_LOG_DBG("Interface: %s, index: %d", interface_name, query.sw_interface_details.sw_if_index);
 
-    if (!bapi_aton(dst_address, mp->payload.dst_address))
+    if (!sc_aton(dst_address, mp->payload.dst_address,
+        sizeof(mp->payload.dst_address)))
         return VAPI_EINVAL;
-    if (!bapi_aton(next_hop, mp->payload.next_hop_address))
+    if (!sc_aton(next_hop, mp->payload.next_hop_address,
+        sizeof(mp->payload.next_hop_address)))
         return VAPI_EINVAL;
 
     vapi_error_e rv ;
-    VAPI_CALL(vapi_ip_add_del_route(g_vapi_ctx, mp, ip_add_del_route_cb, reply));
+    VAPI_CALL(vapi_ip_add_del_route(g_vapi_ctx_instance, mp, ip_add_del_route_cb, reply));
 
     return rv;
 }
@@ -137,7 +140,7 @@ ip_fib_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
         } vapi_payload_ip_fib_details;
         */
         printf ("ip_fib_dump_cb table %u details: network %s/%u\n",
-            reply->table_id, bapi_ntoa(reply->address), reply->address_length);
+            reply->table_id, sc_ntoa(reply->address), reply->address_length);
 
         for (u32 i = 0; i < reply->count; ++i)
         {
@@ -172,7 +175,7 @@ b+>│494             s = format (s, "%U", format_ip46_address,                 
 
             */
 
-           printf("\tnext hop: %s\n", bapi_ntoa(reply->path[i].next_hop));
+           printf("\tnext hop: %s\n", sc_ntoa(reply->path[i].next_hop));
         }
     }
 
@@ -182,14 +185,14 @@ b+>│494             s = format (s, "%U", format_ip46_address,                 
 vapi_error_e
 bin_api_ip_fib_dump()
 {
-    vapi_msg_ip_fib_dump *mp = vapi_alloc_ip_fib_dump (g_vapi_ctx);
+    vapi_msg_ip_fib_dump *mp = vapi_alloc_ip_fib_dump (g_vapi_ctx_instance);
     assert(NULL != mp);
 
     //ip route add 2.2.2.2/24 via 5.5.5.5
     //show ip fib table 0 2.2.2.0/24 detail
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_ip_fib_dump(g_vapi_ctx, mp, ip_fib_dump_cb, NULL));
+    VAPI_CALL(vapi_ip_fib_dump(g_vapi_ctx_instance, mp, ip_fib_dump_cb, NULL));
 
     return rv;
 }
@@ -199,14 +202,14 @@ VAPI_RETVAL_CB(ip_table_add_del)
 vapi_error_e
 bin_api_table_add_del(u8 is_add, u32 table_id)
 {
-    vapi_msg_ip_table_add_del *mp = vapi_alloc_ip_table_add_del(g_vapi_ctx);
+    vapi_msg_ip_table_add_del *mp = vapi_alloc_ip_table_add_del(g_vapi_ctx_instance);
     assert(NULL != mp);
 
     mp->payload.is_add = is_add;
     mp->payload.table_id = table_id;
 
     vapi_error_e rv;
-    VAPI_CALL(vapi_ip_table_add_del(g_vapi_ctx, mp, ip_table_add_del_cb, NULL));
+    VAPI_CALL(vapi_ip_table_add_del(g_vapi_ctx_instance, mp, ip_table_add_del_cb, NULL));
 
     return rv;
 }
