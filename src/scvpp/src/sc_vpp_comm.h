@@ -31,6 +31,8 @@ DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
 #define VPP_IP4_ADDRESS_LEN 4
 #define VPP_IP6_ADDRESS_LEN 16
 #define VPP_IP4_ADDRESS_STRING_LEN 16
+#define VPP_IP4_PREFIX_STRING_LEN 19
+#define VPP_IP4_HOST_PREFIX_LEN 32
 #define VPP_IP6_ADDRESS_STRING_LEN 46
 #define VPP_MAC_ADDRESS_LEN 8
 #define VPP_TAG_LEN VPP_INTFC_NAME_LEN
@@ -111,6 +113,14 @@ api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, 
 
 int sc_aton(const char *cp, u8 * buf, size_t length);
 char * sc_ntoa(const u8 * buf);
+
+/**
+ * @brief Function converts the u8 array from network byte order to host byte order.
+ *
+ * @param[in] host IPv4 address.
+ * @return host byte order value.
+ */
+uint32_t hardntohlu32(uint8_t host[4]);
 
 /*
  * VPP

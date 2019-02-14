@@ -17,6 +17,7 @@
 #include "sc_model.h"
 
 #include "ietf/ietf_interface.h"
+#include "ietf/ietf_nat.h"
 #include "openconfig/openconfig_interfaces.h"
 #include "openconfig/openconfig_local_routing.h"
 
@@ -36,6 +37,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
     /* Use the same sr_subscription_ctx for all models */
     model_register(&plugin_main, ietf_interfaces_xpaths, IETF_INTERFACES_SIZE);
+    model_register(&plugin_main, ietf_nat_xpaths, IETF_NAT_SIZE);
     model_register(&plugin_main, oc_interfaces_xpaths, OC_INTERFACES_SIZE);
     model_register(&plugin_main, oc_local_routing_xpaths, OC_LROUTING_SIZE);
 

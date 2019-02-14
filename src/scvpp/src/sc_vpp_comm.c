@@ -98,3 +98,16 @@ char* sc_ntoa(const u8 * buf)
     memcpy(&addr, buf, sizeof(addr));
     return inet_ntoa(addr);
 }
+
+/**
+ * @brief Function converts the u8 array from network byte order to host byte order.
+ *
+ * @param[in] host IPv4 address.
+ * @return host byte order value.
+ */
+uint32_t hardntohlu32(uint8_t host[4])
+{
+    uint32_t tmp = host[3] | host[2] | host[1] | host[0];
+
+    return ntohl(tmp);
+}

@@ -81,3 +81,90 @@ int ip_prefix_split(const char* ip_prefix)
     //return mask length
     return mask;
 }
+
+/**
+ * @brief Get IPv4 host address from IPv4 prefix.
+ *
+ * @param[out] dst Host IPv4 address.
+ * @param[in] src IPv4 Prefix.
+ * @param[in] length dst buffer length.
+ * @param[out] prefix Get Prefix length, optional value. Can be NULL.
+ * @return -1 when failure, 0 on success.
+ */
+int get_address_from_prefix(char *dst, const char *src, size_t length,
+                            uint8_t *prefix_length)
+{
+    ARG_CHECK2(-1, src, dst);
+
+    size_t size = 0;
+    char *p = strchr(src, '/');
+    if (NULL == p) {
+        return -1;
+    }
+
+    size = p - src;
+
+    // + 1, need size for \0
+    if ((size + 1) > length) {
+        return -1;
+    }
+
+    strncpy(dst, src, size);
+
+    if (NULL != prefix_length) {
+        *prefix_length = atoi(++p);
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Get IPv4 broadcast IP address form IPv4 network address.
+ *
+ * @param[out] broadcat Broadcast Ipv4 address.
+ * @param[in] network Network IPv4 address.
+ * @param[in] prefix Prefix number.
+ * @return -1 when failure, 0 on success.
+ */
+int get_network_broadcast(sc_ipv4_addr *broadcast, const sc_ipv4_addr *network,
+                          uint8_t prefix_length)
+{
+    uint8_t mask = ~0;
+    uint8_t tmp_p = prefix_length;
+    int i;
+
+    ARG_CHECK2(-1, network, broadcast);
+
+    if (32 < prefix_length) {
+        SRP_LOG_ERR_MSG("Prefix length to big.");
+        return -1;
+    }
+
+    for (i = 0; i < 4 ; i++) {
+        broadcast->address[i] = network->address[i] |
+                                            (mask >> (tmp_p > 8 ? 8 : tmp_p));
+        if (tmp_p >= 8) {
+            tmp_p -= 8;
+        } else {
+            tmp_p = 0;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Get last IPv4 address from the IP range.
+ *
+ * @param[out] last_ip_address Last Ipv4 address.
+ * @param[in] first_ip_address First IPv4 address.
+ * @param[in] prefix Prefix number.
+ * @return -1 when failure, 0 on success.
+ */
+int get_last_ip_address(sc_ipv4_addr* last_ip_address,
+                        const sc_ipv4_addr* first_ip_address,
+                        uint8_t prefix_length)
+{
+    return get_network_broadcast(last_ip_address, first_ip_address,
+                                 prefix_length);
+}

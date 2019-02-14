@@ -57,6 +57,7 @@ set(PLUGINS_SOURCES
     sc_model.c
     sys_util.c
     ietf/ietf_interface.c
+    ietf/ietf_nat.c
     openconfig/openconfig_interfaces.c
     openconfig/openconfig_local_routing.c
 )
