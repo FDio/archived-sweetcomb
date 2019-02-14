@@ -17,7 +17,7 @@
 #include <vapi/interface.api.vapi.h>
 #include <vapi/l2.api.vapi.h>
 #include <vapi/ip.api.vapi.h>
-#include <vapi/tap.api.vapi.h>
+#include <vapi/tapv2.api.vapi.h>
 #include <vapi/ipsec.api.vapi.h>
 #include <vapi/vxlan.api.vapi.h>
 #include <vnet/interface.h>
@@ -51,7 +51,8 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
   //SC_REGISTER_RPC_EVT_HANDLER(sc_vxlan_subscribe_tunnel_events);
   //SC_REGISTER_RPC_EVT_HANDLER(sc_l2_bridge_domain_add_del_subscribe_events);
   //SC_REGISTER_RPC_EVT_HANDLER(sc_l2_interface_set_l2_bridge_subscribe_events);
-	
+ 
+
   //INTERFACE
   ietf_interface_subscribe_events(session, &subscription);
 
