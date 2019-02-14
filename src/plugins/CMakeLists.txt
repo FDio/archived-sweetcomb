@@ -48,6 +48,8 @@ set(BAPI_SRC
     ./bapi/bapi_ip.c
     )
 add_library(bapi SHARED ${BAPI_SRC})
+ADD_DEPENDENCIES(bapi scvpp)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_LIST_DIR}/../scvpp/src)
 target_include_directories(bapi PUBLIC ${VPP_INCLUDE_DIRS} ./bapi)
 target_link_libraries(bapi ${VPP_LIBRARIES})
 
@@ -65,7 +67,8 @@ set(PLUGINS_SOURCES
 # build the source code into shared library
 add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
 ADD_DEPENDENCIES(vpp-plugins scvpp)
-target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES} bapi)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_LIST_DIR}/../scvpp/src)
+target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} bapi)
 
 # install the plugin into plugins dir
 install(TARGETS vpp-plugins DESTINATION ${SR_PLUGINS_DIR})
