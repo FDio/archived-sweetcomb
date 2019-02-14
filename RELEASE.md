@@ -43,5 +43,6 @@
 - local routing
 
 ### Connection to VPP
-- connection to VPP's binary API 
+- connect to VPP via binary APIs
+- recconnect to VPP automatically
 
