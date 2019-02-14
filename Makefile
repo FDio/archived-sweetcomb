@@ -30,8 +30,10 @@ endif
 
 ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
 PKG=deb
+cmake=cmake
 else ifeq ($(filter rhel centos fedora opensuse opensuse-leap opensuse-tumbleweed,$(OS_ID)),$(OS_ID))
 PKG=rpm
+cmake=cmake3
 endif
 
 # +libganglia1-dev if building the gmond plugin
@@ -41,7 +43,7 @@ DEB_DEPENDS += bison flex libpcre3-dev libev-dev libavl-dev libprotobuf-c-dev pr
 DEB_DEPENDS += cmake ninja-build python-pkgconfig python-dev libssl-dev indent wget
 
 RPM_DEPENDS  = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel
-RPM_DEPENDS += cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent git
+RPM_DEPENDS += cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent git cmake3
 
 ifeq ($(findstring y,$(UNATTENDED)),y)
 CONFIRM=-y
@@ -170,6 +172,8 @@ install-dep-extra:
 	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make&&make install && sudo ldconfig\
 	&&cd ../../../ && mv v0.7-r1.tar.gz Netopeer2-0.7-r1.tar.gz\
+	\
+	&&cd ../ && rm -rf $(BR)/downloads
 
 install-vpp:
 	@echo "please install vpp as vpp's guide from source if failed"
@@ -196,10 +200,12 @@ build-plugins:
 	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/;make install;
 
 build-package:
-	@mkdir -p $(BR)/build-package/;cd $(BR)/build-package/;cmake $(WS_ROOT)/src/;make package;
+	@mkdir -p $(BR)/build-package/;cd $(BR)/build-package/;$(cmake) $(WS_ROOT)/src/;make package;
+
 clean:
 	@cd $(BR)/build-scvpp && make clean;
 	@cd $(BR)/build-plugins && make clean;
+	@cd $(BR)/build-package && make clean;
 
 distclean:
 	@rm -rf $(BR)/build-scvpp
