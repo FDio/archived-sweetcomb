@@ -200,6 +200,7 @@ build-plugins:
 	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/;make install;
 
 build-package:
+	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
 	@mkdir -p $(BR)/build-package/;cd $(BR)/build-package/;$(cmake) $(WS_ROOT)/src/;make package;rm -rf $(BR)/build-package/_CPack_Packages;
 clean:
 	@cd $(BR)/build-scvpp && make clean;
