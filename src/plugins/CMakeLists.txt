@@ -29,7 +29,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 find_package(VPP)
 find_package(PkgConfig)
 pkg_check_modules(SYSREPO REQUIRED libsysrepo)
-#pkg_check_modules(SCVPP REQUIRED libscvpp)
+pkg_check_modules(SCVPP REQUIRED libscvpp)
 
 # get sysrepo plugins directory from pkgconfig
 if (NOT SR_PLUGINS_DIR)
@@ -50,8 +50,6 @@ set(BAPI_SRC
 
 add_library(bapi SHARED ${BAPI_SRC})
 target_include_directories(bapi PUBLIC ${VPP_INCLUDE_DIRS} ./bapi)
-ADD_DEPENDENCIES(bapi scvpp)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_LIST_DIR}/../scvpp/src)
 target_link_libraries(bapi ${VPP_LIBRARIES})
 
 # plugins sources
@@ -66,8 +64,6 @@ set(PLUGINS_SOURCES
 
 # build the source code into shared library
 add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
-ADD_DEPENDENCIES(vpp-plugins scvpp)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_LIST_DIR}/../scvpp/src)
 target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES} bapi)
 
 # install the plugin into plugins dir
