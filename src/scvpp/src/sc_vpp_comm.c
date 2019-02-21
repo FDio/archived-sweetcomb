@@ -31,8 +31,9 @@ int sc_connect_vpp()
 		rv = vapi_connect(g_vapi_ctx_instance, APP_NAME, NULL, MAX_OUTSTANDING_REQUESTS, RESPONSE_QUEUE_SIZE, VAPI_MODE_BLOCKING, true);
 		if (rv != VAPI_OK)
 		{
-			SC_LOG_ERR("*connect %s faild,with return %d", APP_NAME, rv);
+			SC_LOG_ERR("*connect %s failed with error code %d", APP_NAME, rv);
 			vapi_ctx_free(g_vapi_ctx_instance);
+			g_vapi_ctx_instance = NULL;
 			return -1;
 		}
 		SC_LOG_DBG("*connected %s ok", APP_NAME);
