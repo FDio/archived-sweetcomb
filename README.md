@@ -26,13 +26,16 @@ Details of the changes leading up to this version of Sweetcomb can be found unde
 
 ## Getting started
 
+Make sure you have added FD.io repository using https://packagecloud.io/fdio/release/
+installation script.
+
 Firstly, please follow below steps to install dependencies and build code:
    cd $/sweetcomb/
    make install-dep
    make install-dep-extra
    make install-vpp
    make build-scvpp
-   make build
+   make build-plugins
 
 Then, please start each daemon one by one:
    start vpp (for example on Ubuntu: systemctl start vpp) 
