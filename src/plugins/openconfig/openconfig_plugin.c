@@ -138,76 +138,66 @@ static struct _sys_repo_call sysrepo_callback[] = {
     },
 };
 
+static inline void
+append(plugin_subcscription_t **list, plugin_subcscription_t *new)
+{
+	plugin_subcscription_t **tmp = list;
+
+	while (*tmp)
+		tmp = &(*tmp)->next;
+
+	*tmp = new;
+}
 
 static int sys_repo_subscribe(plugin_main_t *plugin_main, sr_session_ctx_t *ds,
                               struct _sys_repo_call *call)
 {
-    int rc = SR_ERR_OK;
-    plugin_subcscription_t *end, *plugin_subcscription =
-        (plugin_subcscription_t *)calloc(sizeof(plugin_subcscription_t), 1);
+    plugin_subcscription_t *end, *new;
+    int rc;
 
-    if (plugin_subcscription == NULL) {
+	new = calloc(sizeof(plugin_subcscription_t), 1);
+    if (new == NULL)
         return SR_ERR_NOMEM;
+    new->datastore = call->datastore;
+
+    if (call->method == MODULE) {
+		rc = sr_module_change_subscribe(ds, call->xpath, call->cb.mcb,
+										call->private_ctx, call->priority,
+										call->opts,
+										&(new->sr_subscription_ctx));
+		if (SR_ERR_OK != rc)
+			goto error;
+    } else if (call->method == XPATH) {
+		rc = sr_subtree_change_subscribe(ds, call->xpath, call->cb.scb,
+            							 call->private_ctx, call->priority,
+                                         call->opts,
+                                         &(new->sr_subscription_ctx));
+		if (SR_ERR_OK != rc)
+			goto error;
+	} else if (call->method == GETITEM) {
+		rc = sr_dp_get_items_subscribe(ds, call->xpath, call->cb.gcb,
+                                       call->private_ctx, call->opts,
+                                       &(new->sr_subscription_ctx));
+        if (SR_ERR_OK != rc)
+			goto error;
+	} else if (call->method == RPC) {
+		rc = sr_rpc_subscribe(ds, call->xpath, call->cb.rcb,
+							  call->private_ctx, call->opts,
+							  &(new->sr_subscription_ctx));
+		if (SR_ERR_OK != rc)
+				goto error;
     }
 
-    if (plugin_main->plugin_subcscription != NULL) {
-        end = plugin_main->plugin_subcscription;
-        while (end->next != NULL) { end = end->next; }
-        end->next = plugin_subcscription;
-    }
-    else {
-        plugin_main->plugin_subcscription = plugin_subcscription;
-    }
+    SRP_LOG_DBG("Subscribed to xpath: %s", call->xpath);
 
-    plugin_subcscription->datastore = call->datastore;
+	//add new subscription to the end of plugin subscription Linked List
+	append(&(plugin_main->plugin_subcscription), new);
 
-    switch (call->method) {
-        case MODULE:
-            rc = sr_module_change_subscribe(ds, call->xpath, call->cb.mcb,
-                                            call->private_ctx, call->priority,
-                                            call->opts,
-                                            &(plugin_subcscription->sr_subscription_ctx));
-            if (SR_ERR_OK != rc) {
-                SRP_LOG_ERR("Error subscribed to module: %s", call->xpath);
-                return rc;
-            }
-            break;
+    return SR_ERR_OK;
 
-        case XPATH:
-            rc = sr_subtree_change_subscribe(ds, call->xpath, call->cb.scb,
-                                             call->private_ctx, call->priority,
-                                             call->opts,
-                                             &(plugin_subcscription->sr_subscription_ctx));
-            if (SR_ERR_OK != rc) {
-                SRP_LOG_ERR("Error subscribed to change: %s", call->xpath);
-                return rc;
-            }
-            break;
-
-        case GETITEM:
-            SRP_LOG_DBG("Subscribe get item: %s", call->xpath);
-            rc = sr_dp_get_items_subscribe(ds, call->xpath, call->cb.gcb,
-                                           call->private_ctx, call->opts,
-                                           &(plugin_subcscription->sr_subscription_ctx));
-            if (SR_ERR_OK != rc) {
-                SRP_LOG_ERR("Error subscribed to get item: %s", call->xpath);
-                return rc;
-            }
-            break;
-
-        case RPC:
-            rc = sr_rpc_subscribe(ds, call->xpath, call->cb.rcb,
-                                  call->private_ctx, call->opts,
-                                  &(plugin_subcscription->sr_subscription_ctx));
-            if (SR_ERR_OK != rc) {
-                SRP_LOG_ERR("Error subscribed to RPC: %s", call->xpath);
-                return rc;
-            }
-            break;
-    }
-
-    SRP_LOG_DBG("Subscripted to xpath: %s", call->xpath);
-    return rc;
+error:
+	SRP_LOG_ERR("Error subscribed to RPC: %s", call->xpath);
+	return rc;
 }
 
 int openconfig_register_subscribe(plugin_main_t* plugin_main)
@@ -243,25 +233,21 @@ void openconfig_unsubscribe(plugin_main_t* plugin_main)
 {
     plugin_subcscription_t *plugin_subcscription, *tmp;
 
-    if (plugin_main->plugin_subcscription != NULL) {
-        plugin_subcscription = plugin_main->plugin_subcscription;
-        do {
-            tmp = plugin_subcscription;
-            plugin_subcscription = plugin_subcscription->next;
-            switch (tmp->datastore) {
-                case STARTUP:
-                    sr_unsubscribe(plugin_main->ds_startup,
-                                   tmp->sr_subscription_ctx);
-                    break;
+    if (plugin_main->plugin_subcscription == NULL)
+	    return;
 
-                case RUNNING:
-                    sr_unsubscribe(plugin_main->ds_running,
-                                   tmp->sr_subscription_ctx);
-                    break;
-            }
-            free(tmp);
-        } while (plugin_subcscription != NULL);
-    }
+    plugin_subcscription = plugin_main->plugin_subcscription;
+    do {
+        tmp = plugin_subcscription;
+        plugin_subcscription = plugin_subcscription->next;
+
+        if (tmp->datastore == STARTUP)
+			sr_unsubscribe(plugin_main->ds_startup, tmp->sr_subscription_ctx);
+		else if (tmp->datastore == RUNNING)
+			sr_unsubscribe(plugin_main->ds_running, tmp->sr_subscription_ctx);
+
+        free(tmp);
+    } while (plugin_subcscription != NULL);
 }
 
 plugin_main_t plugin_main;
@@ -277,5 +263,5 @@ int openconfig_plugin_init(sr_session_ctx_t* session)
 
 void openconfig_plugin_cleanup()
 {
-    openconfig_register_subscribe(&plugin_main);
+    openconfig_unsubscribe(&plugin_main);
 }
