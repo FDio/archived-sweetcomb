@@ -26,7 +26,7 @@ DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
 DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON;
 DEFINE_VAPI_MSG_IDS_L2_API_JSON;
 DEFINE_VAPI_MSG_IDS_IP_API_JSON;
-DEFINE_VAPI_MSG_IDS_TAP_API_JSON;
+DEFINE_VAPI_MSG_IDS_TAPV2_API_JSON;
 DEFINE_VAPI_MSG_IDS_IPSEC_API_JSON;
 DEFINE_VAPI_MSG_IDS_VXLAN_API_JSON;
 
@@ -51,7 +51,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
   //SC_REGISTER_RPC_EVT_HANDLER(sc_vxlan_subscribe_tunnel_events);
   //SC_REGISTER_RPC_EVT_HANDLER(sc_l2_bridge_domain_add_del_subscribe_events);
   //SC_REGISTER_RPC_EVT_HANDLER(sc_l2_interface_set_l2_bridge_subscribe_events);
- 
+
 
   //INTERFACE
   ietf_interface_subscribe_events(session, &subscription);
