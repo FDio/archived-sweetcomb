@@ -20,7 +20,7 @@ function build_sweetcomb {
     cd /root/src/sweetcomb
     yes | make install-dep
     make build-scvpp
-    make build
+    make build-plugins
 }
 
 function main {
