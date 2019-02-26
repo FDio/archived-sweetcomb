@@ -45,10 +45,10 @@ endif()
 # plugins sources
 set(PLUGINS_SOURCES
     sc_plugins.c
+    sc_model.c
     ietf/ietf_interface.c
     openconfig/openconfig_interfaces.c
     openconfig/openconfig_local_routing.c
-    openconfig/openconfig_plugin.c
     openconfig/sys_util.c
 )
 

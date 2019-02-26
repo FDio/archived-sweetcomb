@@ -17,31 +17,9 @@
 #ifndef __OPENCONFIG_LOCAL_ROUTING_H__
 #define __OPENCONFIG_LOCAL_ROUTING_H__
 
-#include <sysrepo.h>
+#include "../sc_model.h"
 
-int openconfig_local_routing_mod_cb(sr_session_ctx_t *session,
-                                    const char *module_name,
-                                    sr_notif_event_t event,
-                                    void *private_ctx);
-
-int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_config_cb(
-    sr_session_ctx_t *ds, const char *xpath, sr_notif_event_t event,
-    void *private_ctx);
-
-int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_interface_ref_config_cb(
-    sr_session_ctx_t *ds, const char *xpath, sr_notif_event_t event,
-    void *private_ctx);
-
-int openconfig_local_routing_local_routes_static_routes_static_state_cb(
-    const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, const char *original_xpath, void *private_ctx);
-
-int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_state_cb(
-    const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, const char *original_xpath, void *private_ctx);
-
-int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_interface_ref_state_cb(
-    const char *xpath, sr_val_t **values, size_t *values_cnt,
-    uint64_t request_id, const char *original_xpath, void *private_ctx);
+#define OC_LROUTING_SIZE 6
+extern const xpath_t oc_local_routing_xpaths[OC_LROUTING_SIZE];
 
 #endif /* __OPENCONFIG_LOCAL_ROUTING_H__ */

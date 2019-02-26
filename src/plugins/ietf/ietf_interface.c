@@ -18,8 +18,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "ietf_interface.h"
-#include "../sc_plugins.h"
 #include <sysrepo.h>
 #include <sysrepo/plugins.h>
 #include <sysrepo/values.h>
@@ -29,8 +27,38 @@
 #include <vnet/ip/ip.h>
 #include <vapi/interface.api.vapi.h>
 
+#include "ietf_interface.h"
 
 DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON;
+
+typedef struct _s_vpp_interface_
+{
+  u32 sw_if_index;
+  char interface_name[VPP_INTFC_NAME_LEN];
+  u8 l2_address[VPP_MAC_ADDRESS_LEN];
+  u32 l2_address_length;
+  u64 link_speed;
+  u16 link_mtu;
+  u8 admin_up_down;
+  u8 link_up_down;
+} scVppIntfc;
+
+typedef struct _ietf_sw_interface_dump_ctx
+{
+  u8 last_called;
+  int num_ifs;
+  int capacity;
+  scVppIntfc * intfcArray;
+} ietf_sw_interface_dump_ctx;
+
+static i32 ietf_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down);
+static i32 ietf_interface_name2index(const char *name, u32* if_index);
+static i32 ietf_interface_add_del_addr(u32 sw_if_index, u8 is_add, u8 is_ipv6,
+                                       u8 del_all, u8 address_length,
+                                       u8 address[VPP_IP6_ADDRESS_LEN]);
+static int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx);
+static int ietf_initSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
+static int ietf_freeSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
 
 /**
  * @brief Helper function for converting netmask into prefix length.
@@ -259,7 +287,8 @@ ietf_sw_interface_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
     }
   return VAPI_OK;
 }
-int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx)
+
+static int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx)
 {
   if(dctx == NULL)
     {
@@ -282,7 +311,7 @@ int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx)
   return dctx->num_ifs;
 }
 
-i32 ietf_interface_name2index(const char *name, u32* if_index)
+static i32 ietf_interface_name2index(const char *name, u32* if_index)
 {
   ARG_CHECK2(-1, name, if_index);
 
@@ -338,6 +367,7 @@ i32 ietf_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_
   vapi_msg_free (g_vapi_ctx_instance, resp);
   return ret;
 }
+
 i32 ietf_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down)
 {
   i32 ret = -1;
@@ -531,7 +561,11 @@ ietf_interface_change_cb(sr_session_ctx_t *session, const char *xpath, sr_notif_
  * @brief Callback to be called by any request for state data under "/ietf-interfaces:interfaces-state/interface" path.
  */
 static int
-ietf_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt, uint64_t request_id, void *private_ctx)
+ietf_interface_state_cb(const char *xpath, sr_val_t **values,
+                        size_t *values_cnt,
+                        __attribute__((unused)) uint64_t request_id,
+                        __attribute__((unused)) const char *original_xpath,
+                        __attribute__((unused)) void *private_ctx)
 {
     sr_val_t *values_arr = NULL;
     int values_arr_size = 0, values_arr_cnt = 0;
@@ -610,55 +644,51 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt
     return SR_ERR_OK;
 }
 
-/**
- * @brief Callback to be called by plugin daemon upon plugin load.
- */
-int
-ietf_interface_subscribe_events(sr_session_ctx_t *session,
-			      sr_subscription_ctx_t **subscription)
-{
-    int rc = SR_ERR_OK;
-
-    SRP_LOG_DBG_MSG("Initializing vpp-interfaces plugin.");
-
-    rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface",
-            ietf_interface_change_cb, g_vapi_ctx_instance, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
-    if (SR_ERR_OK != rc) {
-        goto error;
+const xpath_t ietf_interfaces_xpaths[IETF_INTERFACES_SIZE] = {
+    {
+        .xpath = "/ietf-interfaces:interfaces/interface",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = ietf_interface_change_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
+    },
+    {
+        .xpath = "/ietf-interfaces:interfaces/interface/enabled",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = ietf_interface_enable_disable_cb,
+        .private_ctx = NULL,
+        .priority = 100,
+        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
+    },
+    {
+        .xpath = "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = ietf_interface_ipv46_address_change_cb,
+        .private_ctx = NULL,
+        .priority = 99,
+        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
+    },
+    {
+        .xpath = "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = ietf_interface_ipv46_address_change_cb,
+        .private_ctx = NULL,
+        .priority = 98,
+        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
+    },
+    {
+        .xpath = "/ietf-interfaces:interfaces-state",
+        .method = GETITEM,
+        .datastore = SR_DS_RUNNING,
+        .cb.gcb = ietf_interface_state_cb,
+        .private_ctx = NULL,
+        .priority = 98,
+        //.opts = SR_SUBSCR_DEFAULT,
+        .opts = SR_SUBSCR_CTX_REUSE
     }
-
-    rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/enabled",
-            ietf_interface_enable_disable_cb, g_vapi_ctx_instance, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
-    if (SR_ERR_OK != rc) {
-        goto error;
-    }
-
-    rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address",
-            ietf_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
-    if (SR_ERR_OK != rc) {
-        goto error;
-    }
-
-    rc = sr_subtree_change_subscribe(session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address",
-            ietf_interface_ipv46_address_change_cb, g_vapi_ctx_instance, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, subscription);
-    if (SR_ERR_OK != rc) {
-        goto error;
-    }
-
-    rc = sr_dp_get_items_subscribe(session, "/ietf-interfaces:interfaces-state",
-				   ietf_interface_state_cb, g_vapi_ctx_instance, SR_SUBSCR_DEFAULT/*SR_SUBSCR_CTX_REUSE*/, subscription);
-    if (SR_ERR_OK != rc) {
-        goto error;
-    }
-
-
-    SRP_LOG_INF_MSG("vpp-interfaces plugin initialized successfully.");
-
-    return SR_ERR_OK;
-
-error:
-    SRP_LOG_ERR_MSG("Error by initialization of the sc_interfaces plugin.");
-    sr_plugin_cleanup_cb(session, &g_vapi_ctx_instance);
-    return rc;
-}
-
+};

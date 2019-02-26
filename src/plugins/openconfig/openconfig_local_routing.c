@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <sysrepo.h>
 #include <sysrepo/xpath.h>
 #include <sysrepo/values.h>
 
@@ -728,3 +729,63 @@ int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_ho
     return next_hop_inner(true, xpath, values, values_cnt, request_id,
                           private_ctx);
 }
+
+const xpath_t oc_local_routing_xpaths[OC_LROUTING_SIZE] = {
+    {
+        .xpath = "openconfig-local-routing",
+        .method = MODULE,
+        .datastore = SR_DS_RUNNING,
+        .cb.mcb  = openconfig_local_routing_mod_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        //.opts = SR_SUBSCR_EV_ENABLED | SR_SUBSCR_APPLY_ONLY
+        .opts = SR_SUBSCR_EV_ENABLED | SR_SUBSCR_APPLY_ONLY | SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/config",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_config_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        //.opts = SR_SUBSCR_DEFAULT
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/interface-ref/config",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_interface_ref_config_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        //.opts = SR_SUBSCR_DEFAULT
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/state",
+        .method = GETITEM,
+        .datastore = SR_DS_RUNNING,
+        .cb.gcb = openconfig_local_routing_local_routes_static_routes_static_state_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/state",
+        .method = GETITEM,
+        .datastore = SR_DS_RUNNING,
+        .cb.gcb = openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_state_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/interface-ref/state",
+        .method = GETITEM,
+        .datastore = SR_DS_RUNNING,
+        .cb.gcb = openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_interface_ref_state_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+};

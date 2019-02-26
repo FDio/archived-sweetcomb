@@ -24,6 +24,7 @@
 #include <string.h>
 #include <sysrepo/xpath.h>
 #include <sysrepo/values.h>
+#include <sysrepo.h>
 
 #define XPATH_SIZE 2000
 
@@ -209,7 +210,7 @@ int openconfig_interface_mod_cb(
     __attribute__((unused)) sr_notif_event_t event,
     __attribute__((unused)) void *private_ctx)
 {
-    SRP_LOG_INF("Module subscribe: %s", module_name);
+    SRP_LOG_DBG("Interface module subscribe: %s", module_name);
 
     return SR_ERR_OK;
 }
@@ -876,3 +877,62 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
     return SR_ERR_OK;
 }
 
+const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE] = {
+    {
+        .xpath = "openconfig-interfaces",
+        .method = MODULE,
+        .datastore = SR_DS_RUNNING,
+        .cb.mcb  = openconfig_interface_mod_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        //.opts = SR_SUBSCR_EV_ENABLED | SR_SUBSCR_APPLY_ONLY
+        .opts = SR_SUBSCR_EV_ENABLED | SR_SUBSCR_APPLY_ONLY | SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-interfaces:interfaces/interface/config",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = openconfig_interfaces_interfaces_interface_config_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        //.opts = SR_SUBSCR_DEFAULT
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-interfaces:interfaces/interface/state",
+        .method = GETITEM,
+        .datastore = SR_DS_RUNNING,
+        .cb.gcb = openconfig_interfaces_interfaces_interface_state_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/state",
+        .method = GETITEM,
+        .datastore = SR_DS_RUNNING,
+        .cb.gcb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address/openconfig-if-ip:config",
+        .method = XPATH,
+        .datastore = SR_DS_RUNNING,
+        .cb.scb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_config_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        //.opts = SR_SUBSCR_DEFAULT
+        .opts = SR_SUBSCR_CTX_REUSE
+    },
+    {
+        .xpath = "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address/openconfig-if-ip:state",
+        .method = GETITEM,
+        .datastore = SR_DS_RUNNING,
+        .cb.gcb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_cb,
+        .private_ctx = NULL,
+        .priority = 0,
+        .opts = SR_SUBSCR_CTX_REUSE
+    }
+};

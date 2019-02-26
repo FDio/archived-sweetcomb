@@ -16,43 +16,10 @@
 #ifndef __IETF_INTERFACE_H__
 #define __IETF_INTERFACE_H__
 
-#include "sc_vpp_comm.h"
+#include "../sc_model.h"
 
-#include <vapi/interface.api.vapi.h>
-
-typedef struct _s_vpp_interface_
-{
-  u32 sw_if_index;
-  char interface_name[VPP_INTFC_NAME_LEN];
-  u8 l2_address[VPP_MAC_ADDRESS_LEN];
-  u32 l2_address_length;
-  u64 link_speed;
-  u16 link_mtu;
-  u8 admin_up_down;
-  u8 link_up_down;
-}scVppIntfc;
-
-typedef struct _ietf_sw_interface_dump_ctx
-{
-  u8 last_called;
-  int num_ifs;
-  int capacity;
-  scVppIntfc * intfcArray;
-} ietf_sw_interface_dump_ctx;
-
-int ietf_initSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
-int ietf_freeSwInterfaceDumpCTX(ietf_sw_interface_dump_ctx * dctx);
-int ietf_swInterfaceDump(ietf_sw_interface_dump_ctx * dctx);
-i32 ietf_interface_name2index(const char *name, u32* if_index);
-
-i32 ietf_interface_add_del_addr( u32 sw_if_index, u8 is_add, u8 is_ipv6, u8 del_all,
-			       u8 address_length, u8 address[VPP_IP6_ADDRESS_LEN] );
-i32 ietf_setInterfaceFlags(u32 sw_if_index, u8 admin_up_down);
-
-
-int
-ietf_interface_subscribe_events(sr_session_ctx_t *session,
-			      sr_subscription_ctx_t **subscription);
+#define IETF_INTERFACES_SIZE 5
+extern const xpath_t ietf_interfaces_xpaths[IETF_INTERFACES_SIZE];
 
 #endif /* __IETF_INTERFACE_H__ */
 
