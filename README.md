@@ -28,6 +28,9 @@ Details of the changes leading up to this version of Sweetcomb can be found unde
 
 Make sure you have added FD.io repository using https://packagecloud.io/fdio/release/
 installation script.
+You should have a sight on the release package, the package name may be defferent in 
+rpm and deb on defferent version
+(such vpp-plugins.deb in 19.01 and vpp-plugin-core.deb and vpp-plugin-dpdk.deb in 19.04)
 
 Firstly, please follow below steps to install dependencies and build code:
    cd $/sweetcomb/
@@ -38,11 +41,11 @@ Firstly, please follow below steps to install dependencies and build code:
    make build-plugins
 
 Then, please start each daemon one by one:
-   start vpp (for example on Ubuntu: systemctl start vpp) 
+   start vpp (for example on Ubuntu: systemctl start vpp)
    sysrepod
    sysrepo-plugind
    netopeer2-server
-   netopeer2-cli   
+   netopeer2-cli
 
 Now you can utilize Sweetcomb.
 
