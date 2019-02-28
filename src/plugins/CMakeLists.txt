@@ -49,7 +49,7 @@ set(BAPI_SRC
     )
 add_library(bapi SHARED ${BAPI_SRC})
 target_include_directories(bapi PUBLIC ${VPP_INCLUDE_DIRS} ./bapi)
-target_link_libraries(bapi ${VPP_LIBRARIES})
+target_link_libraries(bapi ${SCVPP_LIBRARIES})
 
 # plugins sources
 set(PLUGINS_SOURCES
@@ -64,7 +64,7 @@ set(PLUGINS_SOURCES
 
 # build the source code into shared library
 add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
-target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES} bapi)
+target_link_libraries(vpp-plugins bapi)
 
 # install the plugin into plugins dir
 install(TARGETS vpp-plugins DESTINATION ${SR_PLUGINS_DIR})

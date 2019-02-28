@@ -32,7 +32,7 @@ Firstly, please follow below steps to install dependencies and build code:
    make install-dep-extra
    make install-vpp
    make build-scvpp
-   make build
+   make build-plugins
 
 Then, please start each daemon one by one:
    start vpp (for example on Ubuntu: systemctl start vpp) 
