@@ -32,7 +32,7 @@ set(SCVPP_HEADERS
 set(CMAKE_C_FLAGS " -g -O0 -fpic -fPIC -std=gnu99 -Wl,-rpath-link=/usr/lib")
 
 # libraries to link with
-set(LINK_LIBRARIES sysrepo vlibmemoryclient vapiclient vppapiclient svm vppinfra pthread rt dl)
+set(LINK_LIBRARIES vlibmemoryclient vapiclient vppapiclient svm vppinfra pthread rt dl)
 
 # build instructions
 add_library(scvpp SHARED ${SCVPP_SOURCES})

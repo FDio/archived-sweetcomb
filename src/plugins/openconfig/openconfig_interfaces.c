@@ -14,42 +14,17 @@
  * limitations under the License.
  */
 
+#include <assert.h>
+#include <string.h>
+
 #include "openconfig_interfaces.h"
 #include "sys_util.h"
+
 #include "sc_vpp_comm.h"
 #include "sc_vpp_interface.h"
 #include "sc_vpp_ip.h"
 
-#include <assert.h>
-#include <string.h>
-#include <sysrepo/xpath.h>
-#include <sysrepo/values.h>
-#include <sysrepo.h>
-
 #define XPATH_SIZE 2000
-
-static int oi_enable_interface(const char *interface_name,
-                               const bool enable)
-{
-    ARG_CHECK(-1, interface_name);
-
-    int rc = 0;
-    sw_interface_details_query_t query = {0};
-    sw_interface_details_query_set_name(&query, interface_name);
-
-    if (false == get_interface_id(&query)) {
-        return -1;
-    }
-
-    rc = bin_api_sw_interface_set_flags(query.sw_interface_details.sw_if_index,
-                                        enable);
-    if (VAPI_OK != rc) {
-        SRP_LOG_ERR_MSG("Call bin_api_sw_interface_set_flags.");
-        rc = -1;
-    }
-
-    return rc;
-}
 
 // XPATH: /openconfig-interfaces:interfaces/interface[name='%s']/config/
 int openconfig_interfaces_interfaces_interface_config_cb(
@@ -63,6 +38,8 @@ int openconfig_interfaces_interfaces_interface_config_cb(
     char *tmp = NULL;
     char interface_name[XPATH_SIZE] = {0};
     int rc = 0;
+
+    SRP_LOG_INF_MSG("In openconfig_interfaces_interfaces_interface_config_cb");
 
     ARG_CHECK2(SR_ERR_INVAL_ARG, ds, xpath);
 
@@ -128,7 +105,7 @@ int openconfig_interfaces_interfaces_interface_config_cb(
                                                             "description")) {
                     //TODO: LEAF: description, type: string
                 } else if(sr_xpath_node_name_eq(new_val->xpath, "enabled")) {
-                    rc = oi_enable_interface(interface_name,
+                    rc = interface_enable(interface_name,
                                              new_val->data.bool_val);
                 } else if(sr_xpath_node_name_eq(new_val->xpath,
                                                  "oc-vlan:tpid")) {
@@ -150,7 +127,7 @@ int openconfig_interfaces_interfaces_interface_config_cb(
                                                     "description")) {
                     //TODO: LEAF: description, type: string
                 } else if(sr_xpath_node_name_eq(new_val->xpath, "enabled")) {
-                    rc = oi_enable_interface(interface_name,
+                    rc = interface_enable(interface_name,
                                              new_val->data.bool_val);
                 } else if(sr_xpath_node_name_eq(new_val->xpath,
                                                  "oc-vlan:tpid")) {
@@ -175,7 +152,7 @@ int openconfig_interfaces_interfaces_interface_config_cb(
                                                     "description")) {
                     //TODO: LEAF: description, type: string
                 } else if(sr_xpath_node_name_eq(old_val->xpath, "enabled")) {
-                    rc = oi_enable_interface(interface_name, false);
+                    rc = interface_enable(interface_name, false);
                 } else if(sr_xpath_node_name_eq(old_val->xpath,
                                                  "oc-vlan:tpid")) {
                     //TODO: LEAF: oc-vlan:tpid, type: identityref
@@ -204,13 +181,14 @@ int openconfig_interfaces_interfaces_interface_config_cb(
     return SR_ERR_OK;
 }
 
+// openconfig-interfaces
 int openconfig_interface_mod_cb(
     __attribute__((unused)) sr_session_ctx_t *session,
     __attribute__((unused)) const char *module_name,
     __attribute__((unused)) sr_notif_event_t event,
     __attribute__((unused)) void *private_ctx)
 {
-    SRP_LOG_DBG("Interface module subscribe: %s", module_name);
+    SRP_LOG_INF_MSG("In openconfig_interface_mod_cb");
 
     return SR_ERR_OK;
 }
@@ -225,7 +203,6 @@ typedef struct
 
 #define NOT_AVAL "NA"
 
-// XPATH: /openconfig-interfaces:interfaces/interface/state
 
 static int sw_interface_dump_cb_inner(
     vapi_payload_sw_interface_details * reply,
@@ -301,8 +278,6 @@ static int sw_interface_dump_cb_inner(
     return SR_ERR_OK;
 }
 
-
-// XPATH: /openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/state
 static int sw_subinterface_dump_cb_inner(
     vapi_payload_sw_interface_details *reply,
     sys_sw_interface_dump_ctx *dctx)
@@ -367,9 +342,9 @@ static int sw_subinterface_dump_cb_inner(
     return SR_ERR_OK;
 }
 
-static
-bool is_subinterface(const char* subif_name, const char* base_name,
-                     const u32 subif_index)
+static bool
+is_subinterface(const char* subif_name, const char* base_name,
+                const u32 subif_index)
 {
     assert(subif_name && base_name);
 
@@ -434,10 +409,12 @@ sw_interface_dump_vapi_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
 
 static vapi_error_e sysr_sw_interface_dump(sys_sw_interface_dump_ctx * dctx)
 {
+    vapi_msg_sw_interface_dump *dump;
+    vapi_error_e rv;
+
     ARG_CHECK(VAPI_EINVAL, dctx);
 
-    vapi_msg_sw_interface_dump *dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
-    vapi_error_e rv;
+    dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
 
     dump->payload.name_filter_valid = true;
     strcpy((char*)dump->payload.name_filter, (const char *)dctx->sw_interface_details_query.sw_interface_details.interface_name);
@@ -463,11 +440,13 @@ int openconfig_interfaces_interfaces_interface_state_cb(
     char *tmp = NULL;
     char interface_name[XPATH_SIZE] = {0};
 
+    SRP_LOG_INF_MSG("In openconfig_interfaces_interfaces_interface_state_cb");
+
     ARG_CHECK3(SR_ERR_INVAL_ARG, xpath, values, values_cnt);
 
     tmp = xpath_find_first_key(xpath, "name", &state);
     if (NULL == tmp) {
-        SRP_LOG_DBG_MSG("interface_name not found.");
+        SRP_LOG_ERR_MSG("Interface name not found in sysrepo database");
         return SR_ERR_INVAL_ARG;
     }
 
@@ -487,7 +466,7 @@ int openconfig_interfaces_interfaces_interface_state_cb(
     sysr_sw_interface_dump(&dctx);
 
     if (!dctx.sw_interface_details_query.interface_found) {
-        SRP_LOG_DBG_MSG("interface not found");
+        SRP_LOG_ERR_MSG("interface not found");
         return SR_ERR_NOT_FOUND;
     }
 
@@ -498,16 +477,14 @@ int openconfig_interfaces_interfaces_interface_state_cb(
     return SR_ERR_OK;
 }
 
-// XPATH: /openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address/openconfig-if-ip:state
-int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_vapi_cb(
-    vapi_payload_ip_address_details *reply,
-    sysr_values_ctx_t *sysr_values_ctx)
+int oc_dump_ip_helper(char *address_ip, u8 prefix_len,
+                      sysr_values_ctx_t *sysr_values_ctx)
 {
     sr_val_t *vals = NULL;
     int rc = 0;
     int vc = 0;
 
-    ARG_CHECK2(SR_ERR_INVAL_ARG, reply, sysr_values_ctx);
+    ARG_CHECK2(SR_ERR_INVAL_ARG, address_ip, sysr_values_ctx);
 
     vc = 3;
     /* convenient functions such as this can be found in sysrepo/values.h */
@@ -516,8 +493,6 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
         return rc;
     }
 
-    char * address_ip = sc_ntoa(reply->ip);
-
     sr_val_build_xpath(&vals[0], "%s/openconfig-if-ip:ip",
                        sysr_values_ctx->xpath_root);
     sr_val_set_str_data(&vals[0], SR_STRING_T, address_ip);
@@ -525,7 +500,7 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
     sr_val_build_xpath(&vals[1], "%s/openconfig-if-ip:prefix-length",
                        sysr_values_ctx->xpath_root);
     vals[1].type = SR_UINT8_T;
-    vals[1].data.uint8_val = reply->prefix_length;
+    vals[1].data.uint8_val = prefix_len;
 
     sr_val_build_xpath(&vals[2], "%s/openconfig-if-ip:origin",
                        sysr_values_ctx->xpath_root);
@@ -537,35 +512,6 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
     return SR_ERR_OK;
 }
 
-vapi_error_e
-ip_address_dump_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
-                    vapi_error_e rv, bool is_last,
-                    vapi_payload_ip_address_details * reply)
-{
-    ARG_CHECK2(VAPI_EINVAL, ctx, callback_ctx);
-
-    sysr_values_ctx_t *dctx = callback_ctx;
-
-    if (is_last)
-    {
-        assert (NULL == reply);
-    }
-    else
-    {
-        assert (NULL != reply);
-
-        printf ("ip address dump entry:"
-                    "\tsw_if_index[%u]"
-                    "\tip[%s/%u]\n"
-                    , reply->sw_if_index, sc_ntoa(reply->ip),
-                reply->prefix_length);
-
-        openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_vapi_cb(reply, dctx);
-    }
-
-    return VAPI_OK;
-}
-
 //TODO: for some arcane reason, this doesn't work
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
@@ -574,13 +520,16 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
     __attribute__((unused)) void *private_ctx)
 {
     sr_xpath_ctx_t state = {0};
-    vapi_error_e rv;
+    int rc;
     char *tmp = NULL;
     char interface_name[XPATH_SIZE] = {0};
     char subinterface_index[XPATH_SIZE] = {0};
     char address_ip[XPATH_SIZE] = {0};
+    u8 prefix_len;
 
     ARG_CHECK3(SR_ERR_INVAL_ARG, xpath, values, values_cnt);
+
+    SRP_LOG_INF_MSG("In oc-interfaces oc-ip");
 
     tmp = xpath_find_first_key(xpath, "name", &state);
     if (NULL == tmp) {
@@ -613,23 +562,16 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
     snprintf(dctx.xpath_root, XPATH_SIZE, "/openconfig-interfaces:interfaces/interface[name='%s']/subinterfaces/subinterface[index='%s']/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address[ip='%s']/openconfig-if-ip:state",
              interface_name, subinterface_index, address_ip);
 
-    sw_interface_details_query_t query = {0};
-    sw_interface_details_query_set_name(&query, interface_name);
-
-    if (!get_interface_id(&query))
-    {
+    rc = ipv46_address_dump(interface_name, address_ip, &prefix_len, false);
+    if (!rc) {
+        SRP_LOG_ERR_MSG("ipv46_address_dump failed");
         return SR_ERR_INVAL_ARG;
     }
 
-    vapi_msg_ip_address_dump *mp = vapi_alloc_ip_address_dump (g_vapi_ctx_instance);
-    mp->payload.sw_if_index = query.sw_interface_details.sw_if_index;
-    mp->payload.is_ipv6 = 0;
-
-    rv = vapi_ip_address_dump(g_vapi_ctx_instance, mp, ip_address_dump_cb, &dctx);
-    if (VAPI_OK != rv)
-    {
-        SRP_LOG_ERR_MSG("VAPI call failed");
-        return SR_ERR_INVAL_ARG;
+    rc = oc_dump_ip_helper(address_ip, prefix_len, &dctx);
+    if (!rc) {
+        SRP_LOG_ERR_MSG("oc_dump_ip_helper failed");
+        return rc;
     }
 
     sr_xpath_recover(&state);
@@ -639,6 +581,7 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
     return SR_ERR_OK;
 }
 
+// openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/state
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_cb(
     const char *xpath, sr_val_t **values, size_t *values_cnt,
     __attribute__((unused)) uint64_t request_id,
@@ -695,31 +638,7 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_
     return SR_ERR_OK;
 }
 
-// VAPI_RETVAL_CB(sw_interface_add_del_address);
-
-static int oi_int_ipv4_conf(const char *interface_name,
-                            const char *address_ip, u8 prefix_length,
-                            bool is_add)
-{
-    ARG_CHECK2(-1, interface_name, address_ip);
-
-    sw_interface_details_query_t query = {0};
-    sw_interface_details_query_set_name(&query, interface_name);
-    if (!get_interface_id(&query)) {
-        return 0;
-    }
-
-    if (VAPI_OK != bin_api_sw_interface_add_del_address(query.sw_interface_details.sw_if_index,
-        is_add, address_ip, prefix_length))
-    {
-        SRP_LOG_ERR_MSG("Call vapi_sw_interface_add_del_address.");
-        return -1;
-    }
-
-    return 0;
-}
-
-// XPATH: /openconfig-interfaces:interfaces/interface[name='%s']/subinterfaces/subinterface[index='%s']/oc-ip:ipv4/oc-ip:addresses/oc-ip:address[ip='%s']/oc-ip:config/
+// openconfig-interfaces:interfaces/interface[name='%s']/subinterfaces/subinterface[index='%s']/oc-ip:ipv4/oc-ip:addresses/oc-ip:address[ip='%s']/oc-ip:config/
 int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_config_cb(
     sr_session_ctx_t *ds, const char *xpath, sr_notif_event_t event,
     __attribute__((unused)) void *private_ctx)
@@ -756,8 +675,7 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
         return SR_ERR_OK;
     }
 
-    while (sr_get_change_next(ds, it, &oper,
-        &old_val, &new_val) == SR_ERR_OK) {
+    while (sr_get_change_next(ds, it, &oper, &old_val, &new_val) == SR_ERR_OK) {
 
         log_recv_oper(oper, "subtree_change_cb received");
 
@@ -795,8 +713,9 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
                 }
 
                 if (ip_set && prefix_len_set) {
-                    rc = oi_int_ipv4_conf(interface_name, address_ip,
-                                          prefix_len, true);
+                    //add ipv4
+                    rc = ipv46_config_add_remove(interface_name, address_ip,
+                                                 prefix_len, false , true);
                 }
 
                 break;
@@ -822,16 +741,18 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
                 }
 
                 if (old_ip_set && old_prefix_len_set) {
-                    rc = oi_int_ipv4_conf(interface_name, old_address_ip,
-                                          old_prefix_len, false);
+                    //remove ipv4
+                    rc = ipv46_config_add_remove(interface_name, old_address_ip,
+                                                old_prefix_len, false, false);
                     if (0 != rc) {
                         break;
                     }
                 }
 
                 if (ip_set && prefix_len_set) {
-                    rc = oi_int_ipv4_conf(interface_name, address_ip,
-                                          prefix_len, true);
+                    //add ipv4
+                    rc = ipv46_config_add_remove(interface_name, address_ip,
+                                                 prefix_len, false, true);
                 }
                 break;
 
@@ -850,8 +771,9 @@ int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_
                 }
 
                 if (old_ip_set && old_prefix_len_set) {
-                    rc = oi_int_ipv4_conf(interface_name, old_address_ip,
-                                         old_prefix_len, false);
+                    //remove ipv4
+                    rc = ipv46_config_add_remove(interface_name, old_address_ip,
+                                                 old_prefix_len, false, false);
                 }
                 break;
         }
@@ -894,7 +816,7 @@ const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE] = {
         .datastore = SR_DS_RUNNING,
         .cb.scb = openconfig_interfaces_interfaces_interface_config_cb,
         .private_ctx = NULL,
-        .priority = 0,
+        .priority = 98,
         //.opts = SR_SUBSCR_DEFAULT
         .opts = SR_SUBSCR_CTX_REUSE
     },
@@ -904,7 +826,7 @@ const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE] = {
         .datastore = SR_DS_RUNNING,
         .cb.gcb = openconfig_interfaces_interfaces_interface_state_cb,
         .private_ctx = NULL,
-        .priority = 0,
+        .priority = 98,
         .opts = SR_SUBSCR_CTX_REUSE
     },
     {
@@ -913,7 +835,7 @@ const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE] = {
         .datastore = SR_DS_RUNNING,
         .cb.gcb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_cb,
         .private_ctx = NULL,
-        .priority = 0,
+        .priority = 99,
         .opts = SR_SUBSCR_CTX_REUSE
     },
     {
@@ -922,7 +844,7 @@ const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE] = {
         .datastore = SR_DS_RUNNING,
         .cb.scb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_config_cb,
         .private_ctx = NULL,
-        .priority = 0,
+        .priority = 100,
         //.opts = SR_SUBSCR_DEFAULT
         .opts = SR_SUBSCR_CTX_REUSE
     },
@@ -932,7 +854,7 @@ const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE] = {
         .datastore = SR_DS_RUNNING,
         .cb.gcb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_cb,
         .private_ctx = NULL,
-        .priority = 0,
+        .priority = 100,
         .opts = SR_SUBSCR_CTX_REUSE
     }
 };

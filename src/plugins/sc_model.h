@@ -25,6 +25,10 @@
  */
 
 #include <sysrepo.h>
+#include <sysrepo/xpath.h>
+#include <sysrepo/values.h>
+#include <sysrepo/plugins.h>
+
 #include "sc_vpp_comm.h" //for ARG_CHECK only
 
 typedef enum {

@@ -21,26 +21,16 @@
 #include <vapi/interface.api.vapi.h>
 #include <vapi/ip.api.vapi.h>
 
+/* If no IP has been found ip_addr will be "0.0.0.0" */
+extern int ipv46_address_dump(const char *interface_name, char *ip_addr,
+                              u8 *prefix_len, bool is_ipv6);
 
-extern vapi_error_e bin_api_sw_interface_add_del_address(
-    u32 sw_if_index,
-    bool is_add,
-   const char * ip_address,
-   u8 address_length);
+extern int ipv46_config_add_remove(const char *if_name, const char *addr,
+                                   uint8_t prefix, bool is_ipv6, bool add);
 
-extern vapi_error_e bin_api_sw_interface_del_all_address(u32 sw_if_index);
-
-//ip_add_del_route
-extern vapi_error_e bin_api_ip_add_del_route(
-    vapi_payload_ip_add_del_route_reply * reply,
-    const char* dst_address,
-    u8 dst_address_length,
-    const char* next_address,
-    u8 is_add,
-    u32 table_id,
-    const char *interface);
-
-extern vapi_error_e bin_api_ip_fib_dump();
-extern vapi_error_e bin_api_table_add_del(u8 is_add, u32 table_id);
+extern int
+ipv46_config_add_del_route(const char* dst_address, u8 dst_address_length,
+                           const char* next_address, u8 is_add, u32 table_id,
+                           const char *interface);
 
 #endif /* __BAPI_IP_H__ */

@@ -26,60 +26,53 @@
 
 vapi_ctx_t g_vapi_ctx_instance = NULL;
 vapi_mode_e g_vapi_mode = VAPI_MODE_NONBLOCKING;
-//////////////////////////
 
 int sc_connect_vpp()
 {
-	SC_INVOKE_BEGIN;
-	//  SC_LOG_DBG("*******cts %p \n", g_vapi_ctx_instance);
-	if (g_vapi_ctx_instance == NULL)
-	{
-		vapi_error_e rv = vapi_ctx_alloc(&g_vapi_ctx_instance);
-		rv = vapi_connect(g_vapi_ctx_instance, APP_NAME, NULL, MAX_OUTSTANDING_REQUESTS, RESPONSE_QUEUE_SIZE, VAPI_MODE_BLOCKING, true);
-		if (rv != VAPI_OK)
-		{
-			SC_LOG_ERR("*connect %s failed with error code %d", APP_NAME, rv);
-			vapi_ctx_free(g_vapi_ctx_instance);
-			g_vapi_ctx_instance = NULL;
-			return -1;
-		}
-		SC_LOG_DBG("*connected %s ok", APP_NAME);
-	}
-	else
-	{
-		SC_LOG_DBG("connection %s keeping", APP_NAME);
-	}
-	SC_INVOKE_END;
-	return 0;
+    if (g_vapi_ctx_instance == NULL)
+    {
+        vapi_error_e rv = vapi_ctx_alloc(&g_vapi_ctx_instance);
+        rv = vapi_connect(g_vapi_ctx_instance, APP_NAME, NULL,
+                          MAX_OUTSTANDING_REQUESTS, RESPONSE_QUEUE_SIZE,
+                          VAPI_MODE_BLOCKING, true);
+        if (rv != VAPI_OK)
+        {
+            vapi_ctx_free(g_vapi_ctx_instance);
+            g_vapi_ctx_instance = NULL;
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 int sc_disconnect_vpp()
 {
-	if (NULL != g_vapi_ctx_instance)
-	{
-		vapi_disconnect(g_vapi_ctx_instance);
-		vapi_ctx_free(g_vapi_ctx_instance);
-		g_vapi_ctx_instance = NULL;
-	}
-	return 0;
+    if (NULL != g_vapi_ctx_instance)
+    {
+        vapi_disconnect(g_vapi_ctx_instance);
+        vapi_ctx_free(g_vapi_ctx_instance);
+        g_vapi_ctx_instance = NULL;
+    }
+    return 0;
 }
 
 int sc_end_with(const char* str, const char* end)
 {
-	if (str != NULL && end != NULL)
-	{
-		int l1 = strlen(str);
-		int l2 = strlen(end);
-		if (l1 >= l2)
-		{
-			if (strcmp(str + l1 - l2, end) == 0)
-				return 1;
-		}
-	}
-	return 0;
+    if (str != NULL && end != NULL)
+    {
+        int l1 = strlen(str);
+        int l2 = strlen(end);
+        if (l1 >= l2)
+        {
+            if (strcmp(str + l1 - l2, end) == 0)
+                return 1;
+        }
+    }
+    return 0;
 }
 
-bool sc_aton(const char *cp, u8 * buf, size_t length)
+int sc_aton(const char *cp, u8 * buf, size_t length)
 {
     ARG_CHECK2(false, cp, buf);
 
@@ -87,18 +80,14 @@ bool sc_aton(const char *cp, u8 * buf, size_t length)
     int ret = inet_aton(cp, &addr);
 
     if (0 == ret)
-    {
-        SC_LOG_DBG("error: ipv4 address %s", cp);
-        return false;
-    }
+        return -EINVAL;
 
-    if (sizeof(addr) > length) {
-        SC_LOG_DBG_MSG("error: small buffer");
-        return false;
-    }
+    if (sizeof(addr) > length)
+        return -EINVAL;
 
     memcpy(buf, &addr, sizeof (addr));
-    return true;
+
+    return 0;
 }
 
 char* sc_ntoa(const u8 * buf)
@@ -108,15 +97,4 @@ char* sc_ntoa(const u8 * buf)
     struct in_addr addr;
     memcpy(&addr, buf, sizeof(addr));
     return inet_ntoa(addr);
-}
-
-vapi_error_e
-vapi_retval_cb(const char* func_name, i32 retval)
-{
-    if (retval)
-    {
-        SC_LOG_DBG("%s: bad retval=%d", func_name, retval);
-    }
-
-    return VAPI_OK;
 }

@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
+#include <assert.h>
+#include <string.h>
+
 #include "openconfig_local_routing.h"
+
 #include "sys_util.h"
+
 #include "sc_vpp_comm.h"
 #include "sc_vpp_interface.h"
 #include "sc_vpp_ip.h"
-
-#include <assert.h>
-#include <string.h>
-#include <sysrepo.h>
-#include <sysrepo/xpath.h>
-#include <sysrepo/values.h>
 
 #define XPATH_SIZE 2000
 
@@ -87,15 +86,13 @@ static int set_route(sr_session_ctx_t *sess, const char *index,
         return SR_ERR_INVAL_ARG;
     }
 
-    vapi_payload_ip_add_del_route_reply reply = {0};
-
-    vapi_error_e rv = bin_api_ip_add_del_route(&reply, prefix, mask,
-                                               next_hop, is_add, 0, interface);
-    if (VAPI_OK != rv || reply.retval > 0) {
+    rc = ipv46_config_add_del_route(prefix, mask, next_hop, is_add, 0,
+                                    interface);
+    if (!rc) {
         return SR_ERR_INVAL_ARG;
     }
 
-    return VAPI_OK;
+    return SR_ERR_OK;
 }
 
 // XPATH: /openconfig-local-routing:local-routes/static-routes/static[prefix='%s']/next-hops/next-hop[index='%s']/config/

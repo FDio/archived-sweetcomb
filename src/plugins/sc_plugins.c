@@ -12,25 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <vapi/vapi.h>
-#include <vapi/vpe.api.vapi.h>
-#include <vapi/interface.api.vapi.h>
-#include <vapi/l2.api.vapi.h>
-#include <vapi/ip.api.vapi.h>
-#include <vapi/tapv2.api.vapi.h>
-#include <vapi/ipsec.api.vapi.h>
-#include <vapi/vxlan.api.vapi.h>
-#include <vnet/interface.h>
-#include <vnet/mpls/mpls_types.h>
-
-// Use VAPI macros to define symbols
-DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
-DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON;
-DEFINE_VAPI_MSG_IDS_L2_API_JSON;
-DEFINE_VAPI_MSG_IDS_IP_API_JSON;
-DEFINE_VAPI_MSG_IDS_TAPV2_API_JSON;
-DEFINE_VAPI_MSG_IDS_IPSEC_API_JSON;
-DEFINE_VAPI_MSG_IDS_VXLAN_API_JSON;
 
 #include "sc_plugins.h"
 #include "sc_model.h"
@@ -41,13 +22,12 @@ DEFINE_VAPI_MSG_IDS_VXLAN_API_JSON;
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
-    SC_INVOKE_BEGIN;
     plugin_main_t plugin_main;
     int rc;
 
     rc = sc_connect_vpp();
     if (0 != rc) {
-        SC_LOG_ERR("vpp connect error , with return %d.", rc);
+        SRP_LOG_ERR("vpp connect error , with return %d.", rc);
         return SR_ERR_INTERNAL;
     }
 
@@ -61,22 +41,18 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
     /* set subscription as our private context */
     *private_ctx = plugin_main.subscription;
-    SC_INVOKE_END;
 
     return SR_ERR_OK;
 }
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 {
-    SC_INVOKE_BEGIN;
-
     /* subscription was set as our private context */
     if (private_ctx != NULL)
         sr_unsubscribe(session, private_ctx);
-    SC_LOG_DBG_MSG("unload plugin ok.");
+    SRP_LOG_DBG_MSG("unload plugin ok.");
 
     sc_disconnect_vpp();
-    SC_LOG_DBG_MSG("plugin disconnect vpp ok.");
-    SC_INVOKE_END;
+    SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
 }
 

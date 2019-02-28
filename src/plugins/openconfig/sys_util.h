@@ -19,6 +19,7 @@
 
 #include <sysrepo.h>
 #include <sysrepo/xpath.h>
+#include <sysrepo/plugins.h>
 
 #define XPATH_SIZE 2000
 
