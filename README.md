@@ -82,4 +82,3 @@ Finally, check the configuration result.
   vppctl show interface address
 If you configure above successfully, you will get ip address set up on interface TenGigabitEthernet5/0/0.
 
-
