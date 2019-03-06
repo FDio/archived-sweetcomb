@@ -20,36 +20,37 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include "scvpp_nat_test.h"
-#include "sc_vpp_comm.h"
-#include "sc_vpp_nat.h"
+#include "scvpp_test.h"
 
-void test_nat44_static_mapping(__attribute__((unused)) void **state)
+#include <scvpp/comm.h>
+#include <scvpp/nat.h>
+
+
+void test_nat44_static_mapping(void **state)
 {
+    UNUSED(state);
     nat44_add_del_static_mapping_t map = {0};
     nat44_static_mapping_details_t dump = {0};
     u8 empty_ip[4] = {0};
+    int rc;
 
     /*Configure the static mapping
       Alternative to this CLI command:
       nat44 add static mapping local 172.168.0.1 external 172.168.8.5
      */
-
     sc_aton("172.168.0.1", map.local_ip_address,
             sizeof(map.local_ip_address));
-
     sc_aton("172.168.8.5", map.external_ip_address,
             sizeof(map.external_ip_address));
-
     map.addr_only = 1;
-
     map.external_sw_if_index = ~0;
-
     map.is_add = 1;
 
-    nat44_add_del_static_mapping(&map);
+    rc = nat44_add_del_static_mapping(&map);
+    assert_int_equal(rc, SCVPP_OK);
 
-    nat44_static_mapping_dump(&dump);
+    rc = nat44_static_mapping_dump(&dump);
+    assert_int_equal(rc, SCVPP_OK);
 
     assert_int_equal(dump.addr_only, map.addr_only);
 
@@ -62,11 +63,13 @@ void test_nat44_static_mapping(__attribute__((unused)) void **state)
     /* Remove previous config*/
     map.is_add = 0;
 
-    nat44_add_del_static_mapping(&map);
+    rc = nat44_add_del_static_mapping(&map);
+    assert_int_equal(rc, SCVPP_OK);
 
     memset(&dump, 0, sizeof(dump));
 
-    nat44_static_mapping_dump(&dump);
+    rc = nat44_static_mapping_dump(&dump);
+    assert_int_equal(rc, SCVPP_OK);
 
     assert_int_equal(dump.addr_only, 0);
 
@@ -77,14 +80,16 @@ void test_nat44_static_mapping(__attribute__((unused)) void **state)
                         sizeof(dump.external_ip_address));
 }
 
-void test_nat44_static_mapping_with_ports(__attribute__((unused)) void **state)
+void test_nat44_static_mapping_with_ports(void **state)
 {
+    UNUSED(state);
     nat44_add_del_static_mapping_t map = {0};
     nat44_static_mapping_details_t dump = {0};
     nat44_add_del_address_range_t range = {0};
     u8 empty_ip[4] = {0};
     const u16 lport = 77;
     const u16 eport = 88;
+    int rc;
 
     /*Configure address pool
      Alternative to this CLI:
@@ -98,7 +103,8 @@ void test_nat44_static_mapping_with_ports(__attribute__((unused)) void **state)
 
     range.is_add = 1;
 
-    nat44_add_del_addr_range(&range);
+    rc = nat44_add_del_addr_range(&range);
+    assert_int_equal(rc, SCVPP_OK);
 
     /*Configure NAT with ports
      Alternative to this CLI:
@@ -122,9 +128,11 @@ void test_nat44_static_mapping_with_ports(__attribute__((unused)) void **state)
 
     map.is_add = 1;
 
-    nat44_add_del_static_mapping(&map);
+    rc = nat44_add_del_static_mapping(&map);
+    assert_int_equal(rc, SCVPP_OK);
 
-    nat44_static_mapping_dump(&dump);
+    rc = nat44_static_mapping_dump(&dump);
+    assert_int_equal(rc, SCVPP_OK);
 
     assert_int_equal(dump.addr_only, map.addr_only);
 
@@ -142,11 +150,13 @@ void test_nat44_static_mapping_with_ports(__attribute__((unused)) void **state)
 
     map.is_add = 0;
 
-    nat44_add_del_static_mapping(&map);
+    rc = nat44_add_del_static_mapping(&map);
+    assert_int_equal(rc, SCVPP_OK);
 
     memset(&dump, 0, sizeof(dump));
 
-    nat44_static_mapping_dump(&dump);
+    rc = nat44_static_mapping_dump(&dump);
+    assert_int_equal(rc, SCVPP_OK);
 
     assert_int_equal(dump.addr_only, 0);
 
@@ -162,7 +172,8 @@ void test_nat44_static_mapping_with_ports(__attribute__((unused)) void **state)
 
     range.is_add = 0;
 
-    nat44_add_del_addr_range(&range);
+    rc = nat44_add_del_addr_range(&range);
+    assert_int_equal(rc, SCVPP_OK);
 }
 
 const struct CMUnitTest nat_tests[] = {

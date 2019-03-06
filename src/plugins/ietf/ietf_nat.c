@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include "ietf_nat.h"
-#include "sc_vpp_comm.h"
-#include "sc_vpp_interface.h"
-#include "sc_vpp_nat.h"
+#include <scvpp/comm.h>
+#include <scvpp/interface.h>
+#include <scvpp/nat.h>
+
+#include "../sc_model.h"
 
 #include <assert.h>
 #include <string.h>
@@ -29,17 +30,6 @@
 #include <arpa/inet.h>
 
 #include "../sys_util.h"
-
-static int ietf_nat_mod_cb(
-    __attribute__((unused)) sr_session_ctx_t *session,
-    __attribute__((unused)) const char *module_name,
-    __attribute__((unused)) sr_notif_event_t event,
-    __attribute__((unused)) void *private_ctx)
-{
-    SRP_LOG_INF("Module subscribe: %s", module_name);
-
-    return SR_ERR_OK;
-}
 
 /**
  * @brief Wrapper struct for VAPI address range payload.
@@ -103,8 +93,7 @@ static int parse_instance_policy_external_ip_address_pool(
     if (sr_xpath_node_name_eq(val->xpath, "pool-id")) {
         SRP_LOG_WRN("%s not supported.", val->xpath);
     } else if(sr_xpath_node_name_eq(val->xpath, "external-ip-pool")) {
-        rc = get_address_from_prefix(tmp_str, val->data.string_val,
-                                     VPP_IP4_ADDRESS_STRING_LEN, &prefix);
+        rc = prefix2address(tmp_str, val->data.string_val, &prefix);
         if (0 != rc) {
             SRP_LOG_ERR_MSG("Error translate");
             return SR_ERR_INVAL_ARG;
@@ -136,8 +125,9 @@ static int parse_instance_policy_external_ip_address_pool(
 // XPATH: /ietf-nat:nat/instances/instance[id='%s']/policy[id='%s']/external-ip-address-pool[pool-id='%s']/
 static int instances_instance_policy_external_ip_address_pool_cb(
     sr_session_ctx_t *ds, const char *xpath, sr_notif_event_t event,
-    __attribute__((unused)) void *private_ctx)
+    void *private_ctx)
 {
+    UNUSED(private_ctx);
     sr_error_t rc = SR_ERR_OK;
     sr_change_iter_t *it = NULL;
     sr_change_oper_t oper;
@@ -149,6 +139,8 @@ static int instances_instance_policy_external_ip_address_pool_cb(
     struct address_range_t old_address_r = {0};
 
     ARG_CHECK2(SR_ERR_INVAL_ARG, ds, xpath);
+
+    SRP_LOG_INF("In %s", __FUNCTION__);
 
     new_address_r.payload.vrf_id = ~0;
     old_address_r.payload.vrf_id = ~0;
@@ -165,8 +157,7 @@ static int instances_instance_policy_external_ip_address_pool_cb(
         return SR_ERR_OK;
     }
 
-    while (sr_get_change_next(ds, it, &oper,
-        &old_val, &new_val) == SR_ERR_OK) {
+    foreach_change (ds, it, oper, old_val, new_val) {
 
         SRP_LOG_DBG("A change detected in '%s', op=%d",
                     new_val ? new_val->xpath : old_val->xpath, oper);
@@ -345,8 +336,7 @@ static int parse_instance_mapping_table_mapping_entry(
             return SR_ERR_INVAL_ARG;
         }
 
-        rc = get_address_from_prefix(tmp_str, val->data.string_val,
-                                     VPP_IP4_PREFIX_STRING_LEN, NULL);
+        rc = prefix2address(tmp_str, val->data.string_val, NULL);
         if (0 != rc) {
             SRP_LOG_ERR_MSG("Error translate");
             return SR_ERR_INVAL_ARG;
@@ -367,8 +357,7 @@ static int parse_instance_mapping_table_mapping_entry(
             return SR_ERR_INVAL_ARG;
         }
 
-        rc = get_address_from_prefix(tmp_str, val->data.string_val,
-                                     VPP_IP4_ADDRESS_STRING_LEN, NULL);
+        rc = prefix2address(tmp_str, val->data.string_val, NULL);
         if (0 != rc) {
             SRP_LOG_ERR_MSG("Error translate");
             return SR_ERR_INVAL_ARG;
@@ -402,8 +391,9 @@ static int parse_instance_mapping_table_mapping_entry(
 // XPATH: /ietf-nat:nat/instances/instance[id='%s']/mapping-table/mapping-entry[index='%s']/
 static int instances_instance_mapping_table_mapping_entry_cb(
     sr_session_ctx_t *ds, const char *xpath, sr_notif_event_t event,
-    __attribute__((unused)) void *private_ctx)
+    void *private_ctx)
 {
+    UNUSED(private_ctx);
     sr_error_t rc = SR_ERR_OK;
     sr_change_iter_t *it = NULL;
     sr_change_oper_t oper;
@@ -415,6 +405,8 @@ static int instances_instance_mapping_table_mapping_entry_cb(
     struct static_mapping_t old_mapping = {0};
 
     ARG_CHECK2(SR_ERR_INVAL_ARG, ds, xpath);
+
+    SRP_LOG_INF("In %s", __FUNCTION__);
 
     new_mapping.mtype = UNKNOWN;
     old_mapping.mtype = UNKNOWN;
@@ -431,8 +423,7 @@ static int instances_instance_mapping_table_mapping_entry_cb(
         return SR_ERR_OK;
     }
 
-    while (sr_get_change_next(ds, it, &oper,
-        &old_val, &new_val) == SR_ERR_OK) {
+    foreach_change (ds, it, oper, old_val, new_val) {
 
         SRP_LOG_DBG("A change detected in '%s', op=%d",
                     new_val ? new_val->xpath : old_val->xpath, oper);
@@ -502,15 +493,6 @@ error:
 }
 
 const xpath_t ietf_nat_xpaths[IETF_NAT_SIZE] = {
-    {
-        .xpath = "ietf-nat",
-        .method = MODULE,
-        .datastore = SR_DS_RUNNING,
-        .cb.mcb  = ietf_nat_mod_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        .opts = SR_SUBSCR_EV_ENABLED | SR_SUBSCR_APPLY_ONLY | SR_SUBSCR_CTX_REUSE
-    },
     {
         .xpath = "/ietf-nat:nat/instances/instance/policy/external-ip-address-pool",
         .method = XPATH,

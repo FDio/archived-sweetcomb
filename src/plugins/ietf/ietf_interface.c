@@ -15,33 +15,12 @@
 
 #include <stdio.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
-#include "ietf_interface.h"
+#include "../sc_model.h"
+#include "../sys_util.h"
 
-#include "sc_vpp_interface.h"
-#include "sc_vpp_ip.h"
-
-/**
- * @brief Helper function for converting netmask (ex: 255.255.255.0)
- * to prefix length (ex: 24).
- */
-static uint8_t
-netmask_to_prefix(const char *netmask)
-{
-    in_addr_t n = 0;
-    uint8_t i = 0;
-
-    inet_pton(AF_INET, netmask, &n);
-
-    while (n > 0) {
-        n = n >> 1;
-        i++;
-    }
-
-    return i;
-}
+#include <scvpp/interface.h>
+#include <scvpp/ip.h>
 
 /**
  * @brief Callback to be called by any config change of
@@ -51,6 +30,7 @@ static int
 ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath,
                                  sr_notif_event_t event, void *private_ctx)
 {
+    UNUSED(private_ctx);
     char *if_name = NULL;
     sr_change_iter_t *iter = NULL;
     sr_change_oper_t op = SR_OP_CREATED;
@@ -60,22 +40,22 @@ ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath,
     int rc = SR_ERR_OK, op_rc = SR_ERR_OK;
 
     SRP_LOG_INF("In %s", __FUNCTION__);
+
     /* no-op for apply, we only care about SR_EV_ENABLED, SR_EV_VERIFY, SR_EV_ABORT */
-    if (SR_EV_APPLY == event) {
+    if (SR_EV_APPLY == event)
         return SR_ERR_OK;
-    }
+
     SRP_LOG_DBG("'%s' modified, event=%d", xpath, event);
 
     /* get changes iterator */
     rc = sr_get_changes_iter(session, xpath, &iter);
     if (SR_ERR_OK != rc) {
+        sr_free_change_iter(iter);
         SRP_LOG_ERR("Unable to retrieve change iterator: %s", sr_strerror(rc));
         return rc;
     }
 
-    /* iterate over all changes */
-    while ((SR_ERR_OK == op_rc || event == SR_EV_ABORT) &&
-            (SR_ERR_OK == (rc = sr_get_change_next(session, iter, &op, &old_val, &new_val)))) {
+    foreach_change (session, iter, op, old_val, new_val) {
 
         SRP_LOG_DBG("A change detected in '%s', op=%d", new_val ? new_val->xpath : old_val->xpath, op);
         if_name = sr_xpath_key_value(new_val ? new_val->xpath : old_val->xpath, "interface", "name", &xpath_ctx);
@@ -100,23 +80,6 @@ ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath,
     sr_free_change_iter(iter);
 
     return op_rc;
-}
-
-static int free_sw_interface_dump_ctx(dump_all_ctx * dctx)
-{
-  if(dctx == NULL)
-    return -1;
-
-  if(dctx->intfcArray != NULL)
-    {
-      free(dctx->intfcArray);
-    }
-
-    dctx->intfcArray = NULL;
-    dctx->capacity = 0;
-    dctx->num_ifs = 0;
-
-    return 0;
 }
 
 /**
@@ -169,7 +132,8 @@ interface_ipv46_config_modify(const char *if_name, sr_val_t *old_val,
 }
 
 /**
- * @brief Callback to be called by any config change in subtrees "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address"
+ * @brief Callback to be called by any config change in subtrees
+ * "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address"
  * or "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address".
  */
 static int
@@ -178,6 +142,7 @@ ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session,
                                        sr_notif_event_t event,
                                        void *private_ctx)
 {
+    UNUSED(private_ctx);
     sr_change_iter_t *iter = NULL;
     sr_change_oper_t op = SR_OP_CREATED;
     sr_val_t *old_val = NULL;
@@ -207,13 +172,12 @@ ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session,
     /* get changes iterator */
     rc = sr_get_changes_iter(session, xpath, &iter);
     if (SR_ERR_OK != rc) {
+        sr_free_change_iter(iter);
         SRP_LOG_ERR("Unable to retrieve change iterator: %s", sr_strerror(rc));
         return rc;
     }
 
-    /* iterate over all changes */
-    while ((SR_ERR_OK == op_rc || event == SR_EV_ABORT) &&
-            (SR_ERR_OK == (rc = sr_get_change_next(session, iter, &op, &old_val, &new_val)))) {
+    foreach_change(session, iter, op, old_val, new_val) {
 
         SRP_LOG_DBG("A change detected in '%s', op=%d", new_val ? new_val->xpath : old_val->xpath, op);
         if_name = strdup(sr_xpath_key_value(new_val ? new_val->xpath : old_val->xpath, "interface", "name", &xpath_ctx));
@@ -287,8 +251,9 @@ static int
 ietf_interface_change_cb(sr_session_ctx_t *session, const char *xpath,
                          sr_notif_event_t event, void *private_ctx)
 {
+    UNUSED(session); UNUSED(xpath); UNUSED(event); UNUSED(private_ctx);
+
     SRP_LOG_INF("In %s", __FUNCTION__);
-    SRP_LOG_DBG("'%s' modified, event=%d", xpath, event);
 
     return SR_ERR_OK;
 }
@@ -298,87 +263,80 @@ ietf_interface_change_cb(sr_session_ctx_t *session, const char *xpath,
  */
 static int
 ietf_interface_state_cb(const char *xpath, sr_val_t **values,
-                        size_t *values_cnt,
-                        __attribute__((unused)) uint64_t request_id,
-                        __attribute__((unused)) const char *original_xpath,
-                        __attribute__((unused)) void *private_ctx)
+                        size_t *values_cnt, uint64_t request_id,
+                        const char *original_xpath, void *private_ctx)
 {
-    sr_val_t *values_arr = NULL;
-    int values_arr_size = 0, values_arr_cnt = 0;
-    dump_all_ctx dctx;
-    int nb_iface;
-    vpp_interface_t* if_details;
-    int rc = 0;
+    UNUSED(request_id); UNUSED(original_xpath); UNUSED(private_ctx);
+    struct elt* stack;
+    sw_interface_dump_t *dump;
+    sr_val_t *val = NULL;
+    int vc = 5; //number of answer per interfaces
+    int cnt = 0; //value counter
+    int rc = SR_ERR_OK;
 
     SRP_LOG_INF("In %s", __FUNCTION__);
 
-    if (! sr_xpath_node_name_eq(xpath, "interface")) {
-        /* statistics, ipv4 and ipv6 state data not supported */
-      *values = NULL;
-      *values_cnt = 0;
-      return SR_ERR_OK;
-    }
+    if (!sr_xpath_node_name_eq(xpath, "interface"))
+        goto nothing_todo; //no interface field specified
 
     /* dump interfaces */
-    nb_iface = interface_dump_all(&dctx);
-    if (nb_iface <= 0) {
-        SRP_LOG_ERR_MSG("Error by processing of a interface dump request.");
-        free_sw_interface_dump_ctx(&dctx);
-        return SR_ERR_INTERNAL;
-    }
+    stack = interface_dump_all();
+    if (!stack)
+        goto nothing_todo; //no element returned
 
     /* allocate array of values to be returned */
-    values_arr_size = nb_iface * 5;
-    rc = sr_new_values(values_arr_size, &values_arr);
-    if (0 != rc) {
-        free_sw_interface_dump_ctx(&dctx);
-        return rc;
-    }
+    SRP_LOG_DBG("number of interfaces: %d", stack->id+1);
+    rc = sr_new_values((stack->id + 1)* vc, &val);
+    if (0 != rc)
+        goto nothing_todo;
 
-    int i = 0;
-    for (; i < nb_iface; i++) {
-        if_details = dctx.intfcArray+i;
+    foreach_stack_elt(stack) {
+        dump = (sw_interface_dump_t *) data;
 
-        /* currently the only supported interface types are propVirtual / ethernetCsmacd */
-        sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/type", xpath, if_details->interface_name);
-        sr_val_set_str_data(&values_arr[values_arr_cnt], SR_IDENTITYREF_T,
-                strstr((char*)if_details->interface_name, "local0") ? "iana-if-type:propVirtual" : "iana-if-type:ethernetCsmacd");
-        values_arr_cnt++;
+        SRP_LOG_DBG("State of interface %s", dump->interface_name);
+        //TODO need support for type propvirtual
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/type", xpath, dump->interface_name);
+        sr_val_set_str_data(&val[cnt], SR_IDENTITYREF_T, "iana-if-type:ethernetCsmacd");
+        cnt++;
 
-        sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/admin-status", xpath, if_details->interface_name);
-        sr_val_set_str_data(&values_arr[values_arr_cnt], SR_ENUM_T, if_details->admin_up_down ? "up" : "down");
-        values_arr_cnt++;
+        //Be careful, it needs if-mib feature to work !
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/admin-status", xpath, dump->interface_name);
+        sr_val_set_str_data(&val[cnt], SR_ENUM_T, dump->link_up_down ? "up" : "down");
+        cnt++;
 
-        sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/oper-status", xpath, if_details->interface_name);
-        sr_val_set_str_data(&values_arr[values_arr_cnt], SR_ENUM_T, if_details->link_up_down ? "up" : "down");
-        values_arr_cnt++;
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/oper-status", xpath, dump->interface_name);
+        sr_val_set_str_data(&val[cnt], SR_ENUM_T, dump->link_up_down ? "up" : "down");
+        cnt++;
 
-        if (if_details->l2_address_length > 0) {
-            sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/phys-address", xpath, if_details->interface_name);
-            sr_val_build_str_data(&values_arr[values_arr_cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x",
-                    if_details->l2_address[0], if_details->l2_address[1], if_details->l2_address[2],
-                    if_details->l2_address[3], if_details->l2_address[4], if_details->l2_address[5]);
-            values_arr_cnt++;
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/phys-address", xpath, dump->interface_name);
+        if (dump->l2_address_length > 0) {
+            sr_val_build_str_data(&val[cnt], SR_STRING_T,
+                                  "%02x:%02x:%02x:%02x:%02x:%02x",
+                                  dump->l2_address[0], dump->l2_address[1],
+                                  dump->l2_address[2], dump->l2_address[3],
+                                  dump->l2_address[4], dump->l2_address[5]);
         } else {
-            sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/phys-address", xpath, if_details->interface_name);
-            sr_val_build_str_data(&values_arr[values_arr_cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x", 0,0,0,0,0,0);
-            values_arr_cnt++;
+            sr_val_build_str_data(&val[cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x", 0,0,0,0,0,0);
         }
+        cnt++;
 
-        sr_val_build_xpath(&values_arr[values_arr_cnt], "%s[name='%s']/speed", xpath, if_details->interface_name);
-        values_arr[values_arr_cnt].type = SR_UINT64_T;
-        values_arr[values_arr_cnt].data.uint64_val = if_details->link_speed;
-        values_arr_cnt++;
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/speed", xpath, dump->interface_name);
+        val[cnt].type = SR_UINT64_T;
+        val[cnt].data.uint64_val = dump->link_speed;
+        cnt++;
+
+        free(dump);
     }
 
-    SRP_LOG_DBG("Returning %zu state data elements for '%s'", values_arr, xpath);
-
-    *values = values_arr;
-    *values_cnt = values_arr_cnt;
-
-    free_sw_interface_dump_ctx(&dctx);
+    *values = val;
+    *values_cnt = cnt;
 
     return SR_ERR_OK;
+
+nothing_todo:
+    *values = NULL;
+    *values_cnt = 0;
+    return rc;
 }
 
 const xpath_t ietf_interfaces_xpaths[IETF_INTERFACES_SIZE] = {

@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sc_vpp_comm.h"
+#include <scvpp/comm.h>
 
 #include <assert.h>
 #include <string.h>
@@ -24,21 +24,21 @@
 #define MAX_OUTSTANDING_REQUESTS 4
 #define RESPONSE_QUEUE_SIZE 2
 
-vapi_ctx_t g_vapi_ctx_instance = NULL;
+vapi_ctx_t g_vapi_ctx = NULL;
 vapi_mode_e g_vapi_mode = VAPI_MODE_NONBLOCKING;
 
 int sc_connect_vpp()
 {
-    if (g_vapi_ctx_instance == NULL)
+    if (g_vapi_ctx == NULL)
     {
-        vapi_error_e rv = vapi_ctx_alloc(&g_vapi_ctx_instance);
-        rv = vapi_connect(g_vapi_ctx_instance, APP_NAME, NULL,
+        vapi_error_e rv = vapi_ctx_alloc(&g_vapi_ctx);
+        rv = vapi_connect(g_vapi_ctx, APP_NAME, NULL,
                           MAX_OUTSTANDING_REQUESTS, RESPONSE_QUEUE_SIZE,
                           VAPI_MODE_BLOCKING, true);
         if (rv != VAPI_OK)
         {
-            vapi_ctx_free(g_vapi_ctx_instance);
-            g_vapi_ctx_instance = NULL;
+            vapi_ctx_free(g_vapi_ctx);
+            g_vapi_ctx = NULL;
             return -1;
         }
     }
@@ -48,11 +48,11 @@ int sc_connect_vpp()
 
 int sc_disconnect_vpp()
 {
-    if (NULL != g_vapi_ctx_instance)
+    if (NULL != g_vapi_ctx)
     {
-        vapi_disconnect(g_vapi_ctx_instance);
-        vapi_ctx_free(g_vapi_ctx_instance);
-        g_vapi_ctx_instance = NULL;
+        vapi_disconnect(g_vapi_ctx);
+        vapi_ctx_free(g_vapi_ctx);
+        g_vapi_ctx = NULL;
     }
     return 0;
 }

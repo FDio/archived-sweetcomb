@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "sc_vpp_comm.h"
-#include "sc_vpp_nat.h"
+#include <scvpp/comm.h>
+#include <scvpp/nat.h>
 
 #include <assert.h>
 #include <stdbool.h>
@@ -28,8 +28,7 @@ nat44_interface_dump_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
                         vapi_error_e rv, bool is_last,
                         vapi_payload_nat44_interface_details *reply)
 {
-    UNUSED(ctx);
-    UNUSED(rv);
+    UNUSED(ctx); UNUSED(rv);
     vapi_payload_nat44_interface_details *dctx = callback_ctx;
     assert(dctx);
 
@@ -56,10 +55,10 @@ bin_api_nat44_interface_dump(vapi_payload_nat44_interface_details *reply)
 
     ARG_CHECK(VAPI_EINVAL, reply);
 
-    mp = vapi_alloc_nat44_interface_dump(g_vapi_ctx_instance);
+    mp = vapi_alloc_nat44_interface_dump(g_vapi_ctx);
     assert(NULL != mp);
 
-    VAPI_CALL(vapi_nat44_interface_dump(g_vapi_ctx_instance, mp,
+    VAPI_CALL(vapi_nat44_interface_dump(g_vapi_ctx, mp,
                                         nat44_interface_dump_cb, reply));
 
     return rv;
@@ -76,12 +75,12 @@ bin_api_nat44_add_del_interface_addr(
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat44_add_del_interface_addr(g_vapi_ctx_instance);
+    mp = vapi_alloc_nat44_add_del_interface_addr(g_vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
-    VAPI_CALL(vapi_nat44_add_del_interface_addr(g_vapi_ctx_instance, mp,
+    VAPI_CALL(vapi_nat44_add_del_interface_addr(g_vapi_ctx, mp,
                                                 nat44_add_del_interface_addr_cb,
                                                 NULL));
 
@@ -99,13 +98,13 @@ bin_api_nat44_add_del_addr_range(
 
     ARG_CHECK(VAPI_EINVAL, range);
 
-    mp = vapi_alloc_nat44_add_del_address_range(g_vapi_ctx_instance);
+    mp = vapi_alloc_nat44_add_del_address_range(g_vapi_ctx);
 
     assert(NULL != mp);
 
     mp->payload = *range;
 
-    VAPI_CALL(vapi_nat44_add_del_address_range(g_vapi_ctx_instance, mp,
+    VAPI_CALL(vapi_nat44_add_del_address_range(g_vapi_ctx, mp,
                                                nat44_add_del_address_range_cb,
                                                NULL));
 
@@ -123,13 +122,12 @@ bin_api_nat44_add_del_static_mapping(
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat44_add_del_static_mapping(g_vapi_ctx_instance);
-
+    mp = vapi_alloc_nat44_add_del_static_mapping(g_vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
-    VAPI_CALL(vapi_nat44_add_del_static_mapping(g_vapi_ctx_instance, mp,
+    VAPI_CALL(vapi_nat44_add_del_static_mapping(g_vapi_ctx, mp,
                                                 nat44_add_del_static_mapping_cb,
                                                 NULL));
 
@@ -140,8 +138,7 @@ static vapi_error_e nat44_static_mapping_dump_cb(
     struct vapi_ctx_s *ctx, void *callback_ctx, vapi_error_e rv,
     bool is_last,vapi_payload_nat44_static_mapping_details *reply)
 {
-    UNUSED(rv);
-    UNUSED(ctx);
+    UNUSED(rv); UNUSED(ctx);
     vapi_payload_nat44_static_mapping_details *dctx = callback_ctx;
     assert(dctx);
 
@@ -166,10 +163,10 @@ bin_api_nat44_static_mapping_dump(
 
     ARG_CHECK(VAPI_EINVAL, reply);
 
-    msg = vapi_alloc_nat44_static_mapping_dump(g_vapi_ctx_instance);
+    msg = vapi_alloc_nat44_static_mapping_dump(g_vapi_ctx);
     assert(NULL != msg);
 
-    VAPI_CALL(vapi_nat44_static_mapping_dump(g_vapi_ctx_instance, msg,
+    VAPI_CALL(vapi_nat44_static_mapping_dump(g_vapi_ctx, msg,
                                              nat44_static_mapping_dump_cb,
                                              reply));
 
@@ -186,13 +183,13 @@ static vapi_error_e bin_api_nat44_forwarding_enable_disable(
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat44_forwarding_enable_disable(g_vapi_ctx_instance);
+    mp = vapi_alloc_nat44_forwarding_enable_disable(g_vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
     VAPI_CALL(vapi_nat44_forwarding_enable_disable(
-        g_vapi_ctx_instance, mp, nat44_forwarding_enable_disable_cb, NULL));
+        g_vapi_ctx, mp, nat44_forwarding_enable_disable_cb, NULL));
 
     return rv;
 }
@@ -207,113 +204,91 @@ bin_api_nat_set_workers(const vapi_payload_nat_set_workers *msg)
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat_set_workers(g_vapi_ctx_instance);
+    mp = vapi_alloc_nat_set_workers(g_vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
-    VAPI_CALL(vapi_nat_set_workers(g_vapi_ctx_instance, mp, nat_set_workers_cb,
-                                                                        NULL));
+    VAPI_CALL(vapi_nat_set_workers(g_vapi_ctx, mp, nat_set_workers_cb, NULL));
 
     return rv;
 }
 
 int nat44_interface_dump(nat44_interface_details_t *reply)
 {
-    vapi_error_e rc;
+    vapi_error_e rv;
 
-    rc = bin_api_nat44_interface_dump(reply);
-    if (VAPI_OK != rc) {
-        //TODO: Need implement log function
-//         ERROR("Error in nat44_interface_dump, error: %u", rc);
-        return -1;
-    }
+    rv = bin_api_nat44_interface_dump(reply);
+    if (VAPI_OK != rv)
+        return -SCVPP_EINVAL;
 
-    return 0;
+    return SCVPP_OK;
 }
 
 int nat44_add_del_interface_addr(const nat44_add_del_interface_addr_t *msg)
 {
-    vapi_error_e rc;
+    vapi_error_e rv;
 
-    rc = bin_api_nat44_add_del_interface_addr(msg);
-    if (VAPI_OK != rc) {
-        //TODO: Need implement log function
-//         ERROR("Error in nat44_interface_dump, error: %u", rc);
-        return -1;
-    }
+    rv = bin_api_nat44_add_del_interface_addr(msg);
+    if (VAPI_OK != rv)
+        return -SCVPP_EINVAL;
 
-    return 0;
+    return SCVPP_OK;
 }
 
 int nat44_add_del_addr_range(const nat44_add_del_address_range_t *range)
 {
-    vapi_error_e rc;
+    vapi_error_e rv;
 
-    rc = bin_api_nat44_add_del_addr_range(range);
-    if (VAPI_OK != rc) {
-        //TODO: Need implement log function
-//         ERROR("Error in nat44_interface_dump, error: %u", rc);
-        return -1;
-    }
+    rv = bin_api_nat44_add_del_addr_range(range);
+    if (VAPI_OK != rv)
+        return -SCVPP_EINVAL;
 
-    return 0;
+    return SCVPP_OK;
 }
 
 int nat44_add_del_static_mapping(const nat44_add_del_static_mapping_t *msg)
 {
-    vapi_error_e rc;
+    vapi_error_e rv;
 
-    rc = bin_api_nat44_add_del_static_mapping(msg);
-    if (VAPI_OK != rc) {
-        //TODO: Need implement log function
-//         ERROR("Error in nat44_interface_dump, error: %u", rc);
-        return -1;
-    }
+    rv = bin_api_nat44_add_del_static_mapping(msg);
+    if (VAPI_OK != rv)
+        return -SCVPP_EINVAL;
 
-    return 0;
+    return SCVPP_OK;
 }
 
 int nat44_static_mapping_dump(nat44_static_mapping_details_t *reply)
 {
-    vapi_error_e rc;
+    vapi_error_e rv;
 
-    rc = bin_api_nat44_static_mapping_dump(reply);
-    if (VAPI_OK != rc) {
-        //TODO: Need implement log function
-//         ERROR("Error in nat44_interface_dump, error: %u", rc);
-        return -1;
-    }
+    rv = bin_api_nat44_static_mapping_dump(reply);
+    if (VAPI_OK != rv)
+        return -SCVPP_EINVAL;
 
-    return 0;
+    return SCVPP_OK;
 }
 
-int nat44_forwarding_enable_disable(
-    const nat44_forwarding_enable_disable_t *msg)
+int
+nat44_forwarding_enable_disable(const nat44_forwarding_enable_disable_t *msg)
 {
-    vapi_error_e rc;
+    vapi_error_e rv;
 
-    rc = bin_api_nat44_forwarding_enable_disable(msg);
-    if (VAPI_OK != rc) {
-        //TODO: Need implement log function
-//         ERROR("Error in nat44_interface_dump, error: %u", rc);
-        return -1;
-    }
+    rv = bin_api_nat44_forwarding_enable_disable(msg);
+    if (VAPI_OK != rv)
+        return -SCVPP_EINVAL;
 
     return 0;
 }
 
 int nat_set_workers(const nat_set_workers_t *msg)
 {
-    vapi_error_e rc;
+    vapi_error_e rv;
 
-    rc = bin_api_nat_set_workers(msg);
-    if (VAPI_OK != rc) {
-        //TODO: Need implement log function
-//         ERROR("Error in nat44_interface_dump, error: %u", rc);
-        return -1;
-    }
+    rv = bin_api_nat_set_workers(msg);
+    if (VAPI_OK != rv)
+        return -SCVPP_EINVAL;
 
-    return 0;
+    return SCVPP_OK;
 }
 

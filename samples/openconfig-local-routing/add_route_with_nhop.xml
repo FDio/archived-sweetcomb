@@ -1,0 +1,20 @@
+<!-- XML for edit-config RPC to set a route with prefix and next-hop -->
+<local-routes xmlns="http://openconfig.net/yang/local-routing">
+    <static-routes>
+        <static>
+            <prefix>10.0.0.2/24</prefix>
+            <config>
+                <prefix>10.0.0.2/24</prefix>
+            </config>
+            <next-hops>
+                <next-hop>
+                    <index>0</index>
+                    <config>
+                        <index>0</index>
+                        <next-hop>10.0.0.1</next-hop>
+                    </config>
+                </next-hop>
+            </next-hops>
+        </static>
+    </static-routes>
+</local-routes>

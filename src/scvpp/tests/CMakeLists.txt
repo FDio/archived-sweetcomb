@@ -18,24 +18,23 @@ include_directories ("${PROJECT_SOURCE_DIR}/src")
 # check whether valgrind is installed
 find_program(valgrind_FOUND valgrind)
 
-# macro for adding of an unit test
-macro(ADD_UNIT_TEST TEST_NAME)
-    set(TEST_SRC
-        ${TEST_NAME}.c
-        scvpp_nat_test.c
+set(TEST_SRC
+    scvpp_test.h
+    scvpp_test.c
+    scvpp_iface_test.c
+    scvpp_ip_test.c
+    scvpp_nat_test.c
+)
+
+add_executable(scvpp_test ${TEST_SRC})
+target_link_libraries(scvpp_test ${CMOCKA_LIBRARIES} scvpp_a)
+target_include_directories(scvpp_test PRIVATE ../inc)
+add_test(scvpp_test scvpp_test)
+
+if(valgrind_FOUND)
+    add_test(${TEST_NAME}_valgrind valgrind
+        --error-exitcode=1 --read-var-info=yes
+        --leak-check=full --show-leak-kinds=all
+        ./${TEST_NAME}
     )
-    add_executable(${TEST_NAME} ${TEST_SRC})
-    target_link_libraries(${TEST_NAME} ${CMOCKA_LIBRARIES} scvpp_a)
-    add_test(${TEST_NAME} ${TEST_NAME})
-
-    if(valgrind_FOUND)
-        add_test(${TEST_NAME}_valgrind valgrind
-            --error-exitcode=1 --read-var-info=yes
-            --leak-check=full --show-leak-kinds=all
-            ./${TEST_NAME}
-        )
-    endif(valgrind_FOUND)
-endmacro(ADD_UNIT_TEST)
-
-# add individual unit-tests
-ADD_UNIT_TEST(scvpp_test)
+endif(valgrind_FOUND)

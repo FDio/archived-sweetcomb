@@ -1,0 +1,1 @@
+get --filter-xpath /openconfig-local-routing:local-routes/static-routes/static[prefix="10.0.0.0/24"]/next-hops/next-hop[index="0"]/state

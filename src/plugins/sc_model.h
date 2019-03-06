@@ -29,7 +29,7 @@
 #include <sysrepo/values.h>
 #include <sysrepo/plugins.h>
 
-#include "sc_vpp_comm.h" //for ARG_CHECK only
+#include <scvpp/comm.h> //for ARG_CHECK only
 
 typedef enum {
     MODULE,
@@ -67,5 +67,19 @@ typedef struct {
 
 int
 model_register(plugin_main_t *plugin_main, const xpath_t *xpaths, size_t size);
+
+/* Declare registration */
+
+#define OC_INTERFACES_SIZE 5
+extern const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE];
+
+#define OC_LROUTING_SIZE 6
+extern const xpath_t oc_local_routing_xpaths[OC_LROUTING_SIZE];
+
+#define IETF_NAT_SIZE 2
+extern const xpath_t ietf_nat_xpaths[IETF_NAT_SIZE];
+
+#define IETF_INTERFACES_SIZE 5
+extern const xpath_t ietf_interfaces_xpaths[IETF_INTERFACES_SIZE];
 
 #endif /* __SC_MODEL_H__ */

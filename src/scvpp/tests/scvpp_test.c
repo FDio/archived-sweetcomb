@@ -14,89 +14,19 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <setjmp.h>
-#include <cmocka.h>
 
-#include "sc_vpp_comm.h"
-#include "sc_vpp_interface.h"
-#include "sc_vpp_ip.h"
-#include "sc_vpp_v3po.h"
-#include "scvpp_nat_test.h"
+#include <scvpp/comm.h>
+#include <scvpp/v3po.h>
 
-//TODO Check with future function get_interface_state
-static void test_enable_disable(void **state)
-{
-    int rc;
+#include "scvpp_test.h"
 
-    rc = interface_enable("tap0", 1);
-    assert_int_equal(rc, 0);
-
-    rc = interface_enable("tap0", 0);
-    assert_int_equal(rc, 0);
-}
-
-//TODO would need to make sure tap0 is index 1
-//TODO delete eventually because get_interface_id will not be extern
-static void test_name2index(void **state)
-{
-    int rc;
-    const char iface_name[] = "tap0";
-    sw_interface_details_query_t query = {0};
-    sw_interface_details_query_set_name(&query, iface_name);
-
-    rc = get_interface_id(&query);
-    assert_int_equal(rc, 1);
-
-    assert_string_equal(iface_name, query.sw_interface_details.interface_name);
-    assert_int_equal(query.sw_interface_details.sw_if_index, 1);
-}
-
-static void test_add_ipv4(void **state)
-{
-    const char ip_q[VPP_IP4_ADDRESS_STRING_LEN] = "192.168.100.144";
-    char ip_r[VPP_IP4_ADDRESS_STRING_LEN];
-    u8 prefix_q = 24;
-    u8 prefix_r;
-    int rc;
-
-    //add ipv4 on tap0
-    rc = ipv46_config_add_remove("tap0", ip_q, prefix_q, false, true);
-    assert_int_equal(rc, 0);
-
-    rc = ipv46_address_dump("tap0", ip_r, &prefix_r, false);
-    assert_int_equal(rc, 0);
-
-    assert_string_equal(ip_q, ip_r);
-    assert_int_equal(prefix_q, prefix_r);
-}
-
-static void test_remove_ipv4(void **state)
-{
-    const char ip_q[VPP_IP4_ADDRESS_STRING_LEN] = "192.168.100.144";
-    char ip_r[VPP_IP4_ADDRESS_STRING_LEN];
-    u8 prefix_q = 24;
-    u8 prefix_r;
-    int rc;
-
-    //add ipv4 on tap0
-    rc = ipv46_config_add_remove("tap0", ip_q, prefix_q, false, true);
-    assert_int_equal(rc, 0);
-
-    //remove ipv4 on tap0
-    rc = ipv46_config_add_remove("tap0", ip_q, prefix_q, false, false);
-    assert_int_equal(rc, 0);
-
-    //dump ipv4
-    rc = ipv46_address_dump("tap0", ip_r, &prefix_r, false);
-    assert_int_equal(rc, 0);
-
-    assert_string_equal(ip_r, "0.0.0.0");
-}
-
+/* test "AAA.BBB.CCC.DDD" -> {A, B, C, D} */
 static void test_sc_ntoa(void **state)
 {
+    UNUSED(state);
     u8 buf[4] = {192, 168, 100, 44};
     char *res;
 
@@ -104,52 +34,76 @@ static void test_sc_ntoa(void **state)
     assert_string_equal(res, "192.168.100.44");
 }
 
-static void test_create_tapv2(void **state)
+/* test {A, B, C, D} -> "AAA.BBB.CCC.DDD" */
+static void test_sc_aton(void **state)
 {
-    tapv2_create_t query = {0};
+    UNUSED(state);
+    char ip[VPP_IP4_ADDRESS_STRING_LEN] = "192.168.100.44";
+    uint8_t buf[4];
     int rc;
 
-    query.id = 1;
-    query.use_random_mac = 1;
-
-    rc = create_tapv2(&query);
+    rc = sc_aton(ip, buf, VPP_IP4_ADDRESS_LEN);
     assert_int_equal(rc, 0);
 
-    //TODO dump_tav2 and compare values
-
-    rc = delete_tapv2("tap1");
-    assert_int_equal(rc, 0);
+    assert_int_equal(buf[0], 192);
+    assert_int_equal(buf[1], 168);
+    assert_int_equal(buf[2], 100);
+    assert_int_equal(buf[3], 44);
 }
 
-int main()
+static int setup(void **state)
 {
+    UNUSED(state);
     tapv2_create_t query = {0};
-    const struct CMUnitTest tests[] = {
-            cmocka_unit_test_setup_teardown(test_enable_disable, NULL, NULL),
-            cmocka_unit_test_setup_teardown(test_name2index, NULL, NULL),
-            cmocka_unit_test_setup_teardown(test_add_ipv4, NULL, NULL),
-            cmocka_unit_test_setup_teardown(test_remove_ipv4, NULL, NULL),
-            cmocka_unit_test_setup_teardown(test_sc_ntoa, NULL, NULL),
-            cmocka_unit_test_setup_teardown(test_create_tapv2, NULL, NULL),
-    };
 
-    if (sc_connect_vpp() != 0)
+    if (sc_connect_vpp() != 0) {
         fprintf(stderr, "Error connecting to VPP\n");
+        return -1;
+    }
 
     /* Create interface tap0 to test several functions */
     query.id = 0;
     query.use_random_mac = 1;
-    if (create_tapv2(&query) != 0)
+    if (create_tapv2(&query) != 0) {
         fprintf(stderr, "Error creating tap0\n");
+        return -1;
+    }
 
-    cmocka_run_group_tests(tests, NULL, NULL);
+    return 0;
+}
 
-    print_message("\nNAT Tests\n");
-    cmocka_run_group_tests(nat_tests, NULL, NULL);
-
+static int teardown(void **state)
+{
+    UNUSED(state);
     /* Delete tap0 */
-    if (delete_tapv2("tap0") != 0)
+    if (delete_tapv2("tap0") != 0) {
         fprintf(stderr, "Failed deleting tap0\n");
+        return -1;
+    }
 
-    return sc_disconnect_vpp();
+    sc_disconnect_vpp();
+
+    return 0;
+}
+
+/* return code for scvpp-test binary is the number of failed test */
+int main()
+{
+    int rc = 0;
+
+    const struct CMUnitTest common_tests[] = {
+            cmocka_unit_test(test_sc_ntoa),
+            cmocka_unit_test(test_sc_aton),
+    };
+
+    print_message("Common tests\n");
+    rc |= cmocka_run_group_tests(common_tests, NULL, NULL);
+    print_message("Interface tests\n");
+    rc |= cmocka_run_group_tests(iface_tests, setup, teardown);
+    print_message("IP tests\n");
+    rc |= cmocka_run_group_tests(ip_tests, setup, teardown);
+    print_message("NAT tests\n");
+    rc |= cmocka_run_group_tests(nat_tests, setup, teardown);
+
+    return rc;
 }

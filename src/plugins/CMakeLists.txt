@@ -55,7 +55,6 @@ set(CMAKE_C_FLAGS_RELEASE "-Wall -Wextra -std=gnu99 -DNDEBUG -O2 ${RIGOROUS_C_FL
 set(PLUGINS_SOURCES
     sc_plugins.c
     sc_model.c
-    sys_util.c
     ietf/ietf_interface.c
     ietf/ietf_nat.c
     openconfig/openconfig_interfaces.c

@@ -23,22 +23,30 @@
 #include <vapi/vapi_common.h>
 #include <vapi/vpe.api.vapi.h>
 
+typedef enum {
+    SCVPP_OK = 0,       /* Success */
+    SCVPP_EINVAL,       /* Invalid value encountered */
+    SCVPP_EAGAIN,       /* Operation would block */
+    SCVPP_ENOTSUP,      /* Operation not supported */
+    SCVPP_ENOMEM,       /* Out of memory */
+    SCVPP_NOT_FOUND,    /* Required element can not be found */
+} scvpp_error_e;
+
 // Use VAPI macros to define symbols
 DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
 
-#define VPP_INTFC_NAME_LEN 64
-#define VPP_TAPV2_NAME_LEN VPP_INTFC_NAME_LEN
-#define VPP_IP4_ADDRESS_LEN 4
-#define VPP_IP6_ADDRESS_LEN 16
-#define VPP_IP4_ADDRESS_STRING_LEN 16
-#define VPP_IP4_PREFIX_STRING_LEN 19
 #define VPP_IP4_HOST_PREFIX_LEN 32
-#define VPP_IP6_ADDRESS_STRING_LEN 46
-#define VPP_MAC_ADDRESS_LEN 8
-#define VPP_TAG_LEN VPP_INTFC_NAME_LEN
-#define VPP_IKEV2_PROFILE_NAME_LEN VPP_INTFC_NAME_LEN
-#define VPP_IKEV2_PSK_LEN VPP_INTFC_NAME_LEN
-#define VPP_IKEV2_ID_LEN 32
+#define VPP_INTFC_NAME_LEN 64           /* Interface name max length */
+#define VPP_IP4_ADDRESS_LEN 4           /* IPv4 length in VPP format */
+#define VPP_IP6_ADDRESS_LEN 16          /* IPv6 length in VPP format */
+#define VPP_MAC_ADDRESS_LEN 8           /* MAC length in VPP format  */
+/* IPv4 and IPv6 length in string format */
+#define VPP_IP4_ADDRESS_STRING_LEN INET_ADDRSTRLEN //16, include '\0'
+#define VPP_IP6_ADDRESS_STRING_LEN INET6_ADDRSTRLEN //46, include '\0'
+#define VPP_IP4_PREFIX_STRING_LEN \
+    INET_ADDRSTRLEN + sizeof('/') + 2 // include '\0'
+#define VPP_IP6_PREFIX_STRING_LEN \
+    INET6_ADDRSTRLEN + sizeof('/') + 3 // include '\0'
 
 /**********************************MACROS**********************************/
 #define ARG_CHECK(retval, arg) \
@@ -86,9 +94,10 @@ api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, 
                 vapi_payload_##api_name##_reply * reply) \
 { \
     UNUSED(ctx); UNUSED(rv); UNUSED(is_last); \
+    vapi_payload_##api_name##_reply * passed; \
     if (caller_ctx) \
     { \
-        vapi_payload_##api_name##_reply * passed = (vapi_payload_##api_name##_reply *)caller_ctx; \
+        passed = (vapi_payload_##api_name##_reply *)caller_ctx; \
         *passed = *reply; \
     } \
     return VAPI_OK; \
@@ -104,12 +113,80 @@ api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, 
         else \
         { \
             while (VAPI_EAGAIN == (rv = call_code)); \
-            rv = vapi_dispatch (g_vapi_ctx_instance); \
+            if (rv != VAPI_OK) { /* try once more to get reply */ \
+                rv = vapi_dispatch (g_vapi_ctx); \
+            } \
         } \
     } \
     while (0)
 
 #define VAPI_CALL(call_code) VAPI_CALL_MODE(call_code, g_vapi_mode)
+
+struct elt {
+    void *data; //vapi_payload structure
+    struct elt *next;
+    int id; //id of the stack element to count total nb of elements
+};
+
+static inline int push(struct elt **stack, void *data, int length)
+{
+    struct elt *el;
+
+    //new stack node
+    el = malloc(sizeof(struct elt));
+    if (!el)
+        return -ENOMEM;
+    el->data = malloc(length);
+    if (!el->data)
+        return -ENOMEM;
+
+    memcpy(el->data, data, length);
+    if (*stack)
+        el->id = (*stack)->id++;
+    else
+        el->id = 0;
+    el->next = *stack; //point to old value of stack
+    *stack = el; //el is new stack head
+
+    return 0;
+}
+
+static inline void * pop(struct elt **stack)
+{
+    struct elt *prev;
+    void *data;
+
+    if (!(*stack))
+        return NULL;
+
+    data = (*stack)->data; //get data at stack head
+    prev = *stack; //save stack to free memory later
+    *stack = (*stack)->next; //new stack
+
+    free(prev);
+    prev = NULL;
+
+    return data;
+}
+
+#define VAPI_DUMP_LIST_CB(api_name) \
+static vapi_error_e \
+api_name##_all_cb(vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
+              vapi_payload_##api_name##_details *reply) \
+{ \
+    UNUSED(ctx); UNUSED(rv); UNUSED(is_last); \
+    struct elt **stackp; \
+    ARG_CHECK2(VAPI_EINVAL, caller_ctx, reply); \
+    \
+    stackp = (struct elt**) caller_ctx; \
+    push(stackp, reply, sizeof(*reply)); \
+    \
+    return VAPI_OK; \
+}
+
+#define foreach_stack_elt(stack)  \
+    for(void *data = pop(&stack); data != NULL ; data = pop(&stack))
+//for(void *data = pop(&stack); stack != NULL ; data = pop(&stack)) // No!!
 
 int sc_aton(const char *cp, u8 * buf, size_t length);
 char * sc_ntoa(const u8 * buf);
@@ -126,7 +203,7 @@ uint32_t hardntohlu32(uint8_t host[4]);
  * VPP
  */
 
-extern vapi_ctx_t g_vapi_ctx_instance;
+extern vapi_ctx_t g_vapi_ctx;
 extern vapi_mode_e g_vapi_mode;
 
 int sc_connect_vpp();

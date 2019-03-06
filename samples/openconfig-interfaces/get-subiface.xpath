@@ -1,0 +1,1 @@
+get --filter-xpath /openconfig-interfaces:interfaces/interface[name="tap0"]/subinterfaces/*

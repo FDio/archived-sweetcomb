@@ -1,0 +1,36 @@
+<!-- XML for edit-config RPC to set an IP using openconfig-interfaces -->
+<interfaces xmlns="http://openconfig.net/yang/interfaces">
+    <interface>
+        <name>tap0</name>
+        <config>
+            <name>tap0</name>
+            <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+            <mtu>1501</mtu>
+            <loopback-mode>true</loopback-mode>
+            <description>openconfig</description>
+            <enabled>true</enabled>
+        </config>
+        <subinterfaces>
+            <subinterface>
+                <index>0</index>
+                <ipv4 xmlns="http://openconfig.net/yang/interfaces/ip">
+                    <addresses>
+                        <address>
+                            <ip>192.168.0.2</ip>
+                            <config>
+                                <ip>192.168.0.2</ip>
+                                <prefix-length>24</prefix-length>
+                            </config>
+                        </address>
+                    </addresses>
+                </ipv4>
+                <config>
+                    <index>0</index>
+                    <description>openconfig</description>
+                    <enabled>true</enabled>
+                </config>
+            </subinterface>
+        </subinterfaces>
+    </interface>
+</interfaces>
+

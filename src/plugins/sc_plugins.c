@@ -16,11 +16,6 @@
 #include "sc_plugins.h"
 #include "sc_model.h"
 
-#include "ietf/ietf_interface.h"
-#include "ietf/ietf_nat.h"
-#include "openconfig/openconfig_interfaces.h"
-#include "openconfig/openconfig_local_routing.h"
-
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
     plugin_main_t plugin_main;

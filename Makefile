@@ -69,6 +69,8 @@ help:
 	@echo " install-dep            - install software dependencies"
 	@echo " install-dep-extra      - install software extra dependencips from source code"
 	@echo " install-vpp            - install released vpp"
+	@echo " install-models       - install YANG models"
+	@echo " uninstall-models     - uninstall YANG models"
 	@echo " install-dep-gnmi-extra - install software extra dependencips from source code for gNMI"
 	@echo " checkstyle             - check coding style"
 	@echo " fixstyle               - fix coding style"
@@ -247,10 +249,10 @@ fixstyle:
 	@build-root/scripts/checkstyle.sh --fix
 
 build-scvpp:
-	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
+	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
 
 build-plugins:
-	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/;make install;
+	@mkdir -p $(BR)/build-plugins/;cd $(BR)/build-plugins/;cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/;make install;
 
 docker:
 	@build-root/scripts/docker.sh
@@ -269,6 +271,27 @@ endif
 build-package:
 	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
 	@mkdir -p $(BR)/build-package/;cd $(BR)/build-package/;$(cmake) $(WS_ROOT)/src/;make package;rm -rf $(BR)/build-package/_CPack_Packages;
+
+install-models:
+	@cd src/plugins/yang/ietf \
+	&& sysrepoctl --install --yang=ietf-ip@2014-06-16.yang \
+	&& sysrepoctl --install --yang=ietf-nat@2017-11-16.yang \
+	&& sysrepoctl --install --yang=iana-if-type@2017-01-19.yang \
+	&& sysrepoctl -e if-mib -m ietf-interfaces;
+	@cd src/plugins/yang/openconfig \
+	&& sysrepoctl -S --install --yang=openconfig-local-routing@2017-05-15.yang \
+	&& sysrepoctl -S --install --yang=openconfig-interfaces@2018-08-07.yang \
+	&& sysrepoctl -S --install --yang=openconfig-if-ip@2018-01-05.yang;
+
+uninstall-models:
+	@sysrepoctl -u -m openconfig-if-ip \
+	&& sysrepoctl -u -m openconfig-if-aggregate \
+	&& sysrepoctl -u -m openconfig-local-routing \
+	&& sysrepoctl -u -m openconfig-interfaces \
+	&& sysrepoctl -u -m openconfig-vlan-types \
+	&& sysrepoctl -u -m ietf-ip \
+	&& sysrepoctl -u -m ietf-nat \
+	&& sysrepoctl -u -m iana-if-type;
 
 clean:
 	@cd $(BR)/build-scvpp && make clean;

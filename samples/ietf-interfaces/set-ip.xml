@@ -1,0 +1,18 @@
+<!-- XML for edit-config RPC to set an IP using ietf-interfaces -->
+<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface>
+        <name>local0</name>
+        <description>eth0</description>
+        <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+        <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+            <enabled>true</enabled>
+            <mtu>1514</mtu>
+            <address>
+                <ip>192.168.50.72</ip>
+                <prefix-length>24</prefix-length>
+            </address>
+        </ipv4>
+        <enabled>true</enabled>
+    </interface>
+</interfaces>
+
