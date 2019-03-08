@@ -20,6 +20,7 @@ set(SCVPP_SOURCES
     sc_vpp_comm.c
     sc_vpp_interface.c
     sc_vpp_ip.c
+    sc_vpp_v3po.c
 )
 
 # scvpp public headers
@@ -27,6 +28,7 @@ set(SCVPP_HEADERS
     sc_vpp_comm.h
     sc_vpp_interface.h
     sc_vpp_ip.h
+    sc_vpp_v3po.h
 )
 
 set(CMAKE_C_FLAGS " -g -O0 -fpic -fPIC -std=gnu99 -Wl,-rpath-link=/usr/lib")
