@@ -18,7 +18,7 @@
 #include "sc_vpp_comm.h"
 
 #include <string.h>
-#include <vppinfra/types.h>
+#include <sysrepo/plugins.h>
 
 char* xpath_find_first_key(const char *xpath, char *key, sr_xpath_ctx_t *state)
 {

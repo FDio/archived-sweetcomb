@@ -19,7 +19,7 @@
 
 #include "openconfig_local_routing.h"
 
-#include "sys_util.h"
+#include "../sys_util.h"
 
 #include "sc_vpp_comm.h"
 #include "sc_vpp_interface.h"
