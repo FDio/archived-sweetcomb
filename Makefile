@@ -40,10 +40,13 @@ endif
 
 DEB_DEPENDS  = curl build-essential autoconf automake ccache git
 DEB_DEPENDS += bison flex libpcre3-dev libev-dev libavl-dev libprotobuf-c-dev protobuf-c-compiler libcmocka-dev
-DEB_DEPENDS += cmake ninja-build python-pkgconfig python-dev libssl-dev indent wget
+DEB_DEPENDS += cmake ninja-build python-pkgconfig python-dev libssl-dev indent wget zlib1g-dev
+
+DEB_GNMI_DEPENDS = libpugixml-dev libjsoncpp-dev libtool pkg-config golang libc-ares-dev libc-ares2
 
 RPM_DEPENDS  = curl autoconf automake ccache bison flex pcre-devel libev-devel protobuf-c-devel protobuf-c-compiler libcmocka-devel
 RPM_DEPENDS += cmake ninja-build python-pkgconfig python-devel openssl-devel  graphviz wget gcc gcc-c++ indent git cmake3
+RPM_GNMI_DEPENDS = pugixml jsoncpp c-ares c-ares-devel libtool pugixml-devel jsoncpp-devel devtoolset-8-gcc-c++
 
 ifeq ($(findstring y,$(UNATTENDED)),y)
 CONFIRM=-y
@@ -63,18 +66,20 @@ endef
 
 help:
 	@echo "Make Targets:"
-	@echo " install-dep          - install software dependencies"
-	@echo " install-dep-extra    - install software extra dependencips from source code"
-	@echo " install-vpp          - install released vpp"
-	@echo " checkstyle           - check coding style"
-	@echo " fixstyle             - fix coding style"
-	@echo " build-scvpp          - build scvpp"
-	@echo " build-plugins        - build plugins"
-	@echo " build-package        - build rpm or deb package"
-	@echo " docker               - build sweetcomb in docker enviroment"
-	@echo " docker_test          - run test in docker enviroment"
-	@echo " clean                - clean all build"
-	@echo " distclean            - remove all build directory"
+	@echo " install-dep            - install software dependencies"
+	@echo " install-dep-extra      - install software extra dependencips from source code"
+	@echo " install-vpp            - install released vpp"
+	@echo " install-dep-gnmi-extra - install software extra dependencips from source code for gNMI"
+	@echo " checkstyle             - check coding style"
+	@echo " fixstyle               - fix coding style"
+	@echo " build-scvpp            - build scvpp"
+	@echo " build-plugins          - build plugins"
+	@echo " build-gnmi             - build gNMIServer"
+	@echo " build-package          - build rpm or deb package"
+	@echo " docker                 - build sweetcomb in docker enviroment"
+	@echo " docker_test            - run test in docker enviroment"
+	@echo " clean                  - clean all build"
+	@echo " distclean              - remove all build directory"
 $(BR)/.deps.ok:
 ifeq ($(findstring y,$(UNATTENDED)),y)
 	make install-dep
@@ -177,6 +182,52 @@ install-dep-extra:
 	\
 	&&cd ../ && rm -rf $(BR)/downloads
 
+install-dep-gnmi-extra:
+	@rm -rf $(BR)/downloads
+	@mkdir -p $(BR)/downloads/
+ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
+	@sudo -E apt-get update
+	@sudo -E apt-get $(APT_ARGS) $(CONFIRM) $(FORCE) install $(DEB_GNMI_DEPENDS)
+	@sudo apt-get install -y software-properties-common
+	@sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+	@sudo apt update
+	@sudo apt install g++-7 -y
+	@sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 \
+                         --slave /usr/bin/g++ g++ /usr/bin/g++-7
+	@sudo update-alternatives --config gcc
+
+else ifeq ($(OS_ID),centos)
+	@sudo -E yum install $(CONFIRM) $(RPM_GNMI_DEPENDS)
+else
+	$(error "This option currently works only on Ubuntu, Debian, Centos or openSUSE systems")
+endif
+
+	@cd $(BR)/downloads/\
+	&&wget https://github.com/Kitware/CMake/releases/download/v3.14.0-rc2/cmake-3.14.0-rc2.tar.gz \
+	&&tar xvf cmake-3.14.0-rc2.tar.gz &&cd cmake-3.14.0-rc2\
+	&&./configure &&make &&make install\
+	\
+	&&cd $(BR)/downloads/\
+	&&wget https://github.com/c-ares/c-ares/releases/download/cares-1_15_0/c-ares-1.15.0.tar.gz\
+	&&tar xvf c-ares-1.15.0.tar.gz\
+	&&mkdir -p c-ares-1.15.0/build && cd c-ares-1.15.0/build\
+	&&cmake -DCMAKE_BUILD_TYPE=Release ../ &&make install\
+	\
+	&&cd $(BR)/downloads/\
+	&&wget https://github.com/protocolbuffers/protobuf/archive/v3.7.0rc2.tar.gz\
+	&&tar xvf v3.7.0rc2.tar.gz\
+	&&cd protobuf-3.7.0rc2 &&./autogen.sh &&./configure --prefix=/usr\
+	&&make &&make install &&ldconfig\
+	\
+	&&cd $(BR)/downloads/\
+	&&wget https://github.com/grpc/grpc/archive/v1.18.0.tar.gz\
+	&&tar xvf v1.18.0.tar.gz &&cd grpc-1.18.0 &&mkdir -p build && cd build\
+	&&cmake  -DgRPC_INSTALL:BOOL=ON -DgRPC_BUILD_TESTS:BOOL=OFF \
+	-DgRPC_ZLIB_PROVIDER:STRING=package -DgRPC_CARES_PROVIDER:STRING=package \
+	-DgRPC_SSL_PROVIDER:STRING=package -DgRPC_PROTOBUF_PROVIDER=package \
+	-DCMAKE_BUILD_TYPE=Release  ../\
+	&&make ../ &&make install
+
 install-vpp:
 	@echo "please install vpp as vpp's guide from source if failed"
 ifeq ($(PKG),deb)
@@ -207,6 +258,14 @@ docker:
 docker_test:
 	@test/run_test.sh
 
+build-gnmi:
+ifeq ($(OS_ID),centos)
+	@source /opt/rh/devtoolset-8/enable \
+	&&mkdir -p $(BR)/build-gnmi/;cd $(BR)/build-gnmi/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/gnmi/;make; make install;
+else
+	@mkdir -p $(BR)/build-gnmi/;cd $(BR)/build-gnmi/;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/gnmi/;make; make install;
+endif
+
 build-package:
 	@mkdir -p $(BR)/build-scvpp/;cd $(BR)/build-scvpp;cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;make install;
 	@mkdir -p $(BR)/build-package/;cd $(BR)/build-package/;$(cmake) $(WS_ROOT)/src/;make package;rm -rf $(BR)/build-package/_CPack_Packages;
@@ -215,8 +274,10 @@ clean:
 	@cd $(BR)/build-scvpp && make clean;
 	@cd $(BR)/build-plugins && make clean;
 	@cd $(BR)/build-package && make clean;
+	@cd $(BR)/build-gnmi && make clean;
 
 distclean:
 	@rm -rf $(BR)/build-scvpp
 	@rm -rf $(BR)/build-plugins
 	@rm -rf $(BR)/build-package
+	@rm -rf $(BR)/build-gnmi
