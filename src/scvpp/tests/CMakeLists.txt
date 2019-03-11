@@ -22,6 +22,7 @@ find_program(valgrind_FOUND valgrind)
 macro(ADD_UNIT_TEST TEST_NAME)
     set(TEST_SRC
         ${TEST_NAME}.c
+        scvpp_nat_test.c
     )
     add_executable(${TEST_NAME} ${TEST_SRC})
     target_link_libraries(${TEST_NAME} ${CMOCKA_LIBRARIES} scvpp_a)

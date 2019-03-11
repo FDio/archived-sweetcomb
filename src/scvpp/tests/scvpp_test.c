@@ -23,6 +23,7 @@
 #include "sc_vpp_interface.h"
 #include "sc_vpp_ip.h"
 #include "sc_vpp_v3po.h"
+#include "scvpp_nat_test.h"
 
 //TODO Check with future function get_interface_state
 static void test_enable_disable(void **state)
@@ -142,6 +143,9 @@ int main()
         fprintf(stderr, "Error creating tap0\n");
 
     cmocka_run_group_tests(tests, NULL, NULL);
+
+    print_message("\nNAT Tests\n");
+    cmocka_run_group_tests(nat_tests, NULL, NULL);
 
     /* Delete tap0 */
     if (delete_tapv2("tap0") != 0)
