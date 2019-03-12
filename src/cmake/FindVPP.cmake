@@ -1,11 +1,3 @@
-# - Try to find LibVPP
-# Once done this will define
-#
-#  VPP_FOUND - system has VPP
-#  VPP_INCLUDE_DIRS - the VPP include directory
-#  VPP_LIBRARIES - Link these to use LibSSH
-#
-
 #
 # Copyright (c) 2018 PANTHEON.tech.
 #
@@ -20,7 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+# - Try to find LibVPP
+# Once done this will define
 #
+#  VPP_FOUND - system has VPP
+#  VPP_INCLUDE_DIRS - the VPP include directory
+#  VPP_LIBRARIES - Link these to use LibSSH
 
 
 if (VPP_LIBRARIES AND VPP_INCLUDE_DIRS)
@@ -159,16 +158,6 @@ else (VPP_LIBRARIES AND VPP_INCLUDE_DIRS)
       ${CMAKE_INSTALL_PREFIX}/lib
   )
 
-#  find_library(VOM_LIBRARY
-#    NAMES
-#      vom
-#      libvom
-#    PATHS
-#      ${VPP_LIBRARY_PATH}
-#      ${CMAKE_LIBRARY_PATH}
-#      ${CMAKE_INSTALL_PREFIX}/lib
-#  )
-
   if (VPP_INCLUDE_DIR AND VPP_LIBRARY)
     set(VPP_FOUND TRUE)
   else (VPP_INCLUDE_DIR AND VPP_LIBRARY)
@@ -191,7 +180,6 @@ else (VPP_LIBRARIES AND VPP_INCLUDE_DIRS)
     ${VLIB_LIBRARY}
     ${VATPLUGIN_LIBRARY}
     ${VAPI_LIBRARY}
-#    ${VOM_LIBRARY}
   )
 
   # show the VPP_INCLUDE_DIRS and VPP_LIBRARIES variables only in the advanced view

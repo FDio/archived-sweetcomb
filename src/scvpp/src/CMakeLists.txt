@@ -13,8 +13,6 @@
 # limitations under the License.
 #
 
-include(GNUInstallDirs)
-
 # scvpp sources
 set(SCVPP_SOURCES
     sc_vpp_comm.c
@@ -33,7 +31,15 @@ set(SCVPP_HEADERS
     sc_vpp_nat.h
 )
 
-set(CMAKE_C_FLAGS " -g -O0 -fpic -fPIC -std=gnu99 -Wl,-rpath-link=/usr/lib")
+# Generate a compile_commands.json with compile options
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+#set compiler and linker flags
+set(RIGOROUS_C_FLAGS "-Wlogical-op -Wformat=2")
+set(CMAKE_C_FLAGS "-Wall -Wextra -std=gnu99 ${RIGOROUS_C_FLAGS}")
+set(CMAKE_C_FLAGS_DEBUG "-Wall -Wextra -std=gnu99 -g -O0 ${RIGOROUS_C_FLAGS}")
+#NDEBUG to skip assert checks
+set(CMAKE_C_FLAGS_RELEASE "-Wall -Wextra -std=gnu99 -DNDEBUG -O2 ${RIGOROUS_C_FLAGS}")
 
 # libraries to link with
 set(LINK_LIBRARIES vlibmemoryclient vapiclient vppapiclient svm vppinfra pthread rt dl)

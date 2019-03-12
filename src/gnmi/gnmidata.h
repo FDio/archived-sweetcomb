@@ -18,7 +18,6 @@
 #define GNMIDATA_H
 
 #include <string>
-#include <variant>
 
 /**
  * @todo write docs
@@ -38,14 +37,7 @@ public:
     };
 
 public:
-    /**
-     * Default constructor
-     */
     gNMIData() = default;
-
-    /**
-     * Destructor
-     */
     ~gNMIData() = default;
 
     ValueType dataType() const;
@@ -64,7 +56,8 @@ private:
 
 private:
     ValueType dtype = ValueType::UnknownVal;
-    std::variant<int, std::string> value;
+    int intData;
+    std::string strData;
     std::string xpath;
 };
 

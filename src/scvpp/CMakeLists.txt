@@ -16,8 +16,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(scvpp)
 
-# add subdirectories
-add_subdirectory(src)
+# DEPENDENCIES
+##############
 
 # enable testing if requested and possible
 SET(ENABLE_TESTS 1 CACHE BOOL "Enable unit tests.")
@@ -32,9 +32,21 @@ if(ENABLE_TESTS)
     endif(CMOCKA_FOUND)
 endif(ENABLE_TESTS)
 
-find_package(PkgConfig QUIET)
+# COMPILER & LINKER & INSTALL
+#############################
+
+#define CMAKE_INSTALL_LIBDIR/INCLUDEDIR
+include(GNUInstallDirs)
+
+add_subdirectory(src)
+
+# MORE INSTALL
+##############
+
+find_package(PkgConfig QUIET) #QUIET disables message if not found
 if(PKG_CONFIG_FOUND)
     # generate and install pkg-config file
     configure_file("libscvpp.pc.in" "libscvpp.pc" @ONLY)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libscvpp.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 endif()
+

@@ -24,7 +24,8 @@ gNMIData::ValueType gNMIData::dataType() const
 void gNMIData::clean()
 {
     dtype = ValueType::UnknownVal;
-    value = {};
+    strData = "";
+    intData = 0;
     xpath = "";
 }
 
@@ -46,13 +47,13 @@ void gNMIData::setXPath(const std::string& str, xPathType type)
 void gNMIData::setValue(const std::string& str)
 {
     dtype = ValueType::dStringVal;
-    value = str;
+    strData = str;
 }
 
 void gNMIData::setValue(int val)
 {
     dtype = ValueType::dIntVal;
-    value = val;
+    intData = val;
 }
 
 std::string gNMIData::getXPath(gNMIData::xPathType type) const
@@ -78,7 +79,7 @@ std::string gNMIData::getStr() const
             return std::to_string(getInt());
 
         case ValueType::dStringVal:
-            return std::get<std::string>(value);
+            return strData;
 
         case ValueType::UnknownVal:
         default:
@@ -91,7 +92,7 @@ std::string gNMIData::getStr() const
 
 int gNMIData::getInt() const
 {
-    return std::get<int>(value);
+    return intData;
 }
 
 std::string gNMIData::convertToSyrepoPath() const

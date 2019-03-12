@@ -12,24 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 cmake_minimum_required(VERSION 2.8)
 project(sysrepo-vpp-plugins)
 
-# set compiler option
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-set(CMAKE_C_FLAGS "-Wall -std=gnu99")
-set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2")
-set(CMAKE_C_FLAGS_DEBUG   "-g -O0")
-set (CMAKE_INSTALL_LIBDIR "/usr/lib")
+# DEPENDENCIES
+##############
 
-# Cmake find modules
+# Cmake find modules directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 
-find_package(VPP)
-find_package(PkgConfig)
-pkg_check_modules(SYSREPO REQUIRED libsysrepo)
-pkg_check_modules(SCVPP REQUIRED libscvpp)
+# check for required packages
+find_package(VPP) #use FindVPP.cmake
+find_package(PkgConfig) #official cmake module
+pkg_check_modules(SYSREPO REQUIRED libsysrepo) #PkgConfig cmake module maccro
+pkg_check_modules(SCVPP REQUIRED libscvpp) #PkgConfig cmake module maccro
 
 # get sysrepo plugins directory from pkgconfig
 if (NOT SR_PLUGINS_DIR)
@@ -41,6 +37,19 @@ endif()
 if (NOT SR_PLUGINS_DIR)
     message(FATAL_ERROR "Cannot get sysrepo plugins directory due to missing pkg-config, set SR_PLUGINS_DIR manually.")
 endif()
+
+# COMPILER & LINKER
+###################
+
+# Generate a compile_commands.json with compile options
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+# set compiler and linker flags
+set(RIGOROUS_C_FLAGS "-Wlogical-op -Wformat=2")
+set(CMAKE_C_FLAGS "-Wall -Wextra -std=gnu99 ${RIGOROUS_C_FLAGS}")
+set(CMAKE_C_FLAGS_DEBUG "-Wall -Wextra -std=gnu99 -g -O0 ${RIGOROUS_C_FLAGS}")
+#NDEBUG to skip assert checks
+set(CMAKE_C_FLAGS_RELEASE "-Wall -Wextra -std=gnu99 -DNDEBUG -O2 ${RIGOROUS_C_FLAGS}")
 
 # plugins sources
 set(PLUGINS_SOURCES
@@ -55,6 +64,9 @@ set(PLUGINS_SOURCES
 # build the source code into shared library
 add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
 target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES})
+
+# INSTALL
+#########
 
 # install the plugin into plugins dir
 install(TARGETS vpp-plugins DESTINATION ${SR_PLUGINS_DIR})

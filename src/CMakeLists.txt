@@ -17,20 +17,11 @@ cmake_minimum_required(VERSION 2.8)
 project(sweetcomb)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-
-include(GNUInstallDirs)
-
 # set default build type if not specified by user
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE debug)
 endif()
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
-
-# set compiler options
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-set(CMAKE_C_FLAGS "-Wall -std=gnu99")
-set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2")
-set(CMAKE_C_FLAGS_DEBUG   "-g -O0")
 
 # add subdirectories
 add_subdirectory(scvpp)

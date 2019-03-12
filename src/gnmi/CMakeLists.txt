@@ -17,25 +17,19 @@
 cmake_minimum_required(VERSION 2.8)
 project(gNMI-server)
 
-set(CMAKE_CXX_STANDARD 17)
-# set compiler option
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-set(CMAKE_C_FLAGS "-Wall -std=c++17")
-set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2")
-set(CMAKE_C_FLAGS_DEBUG   "-g -O0")
-set(CMAKE_INSTALL_LIBDIR "/usr/lib")
+#C++11 is required by gNMI
+set(CMAKE_CXX_STANDARD 11)
+
+# DEPENDENCIES
+##############
 
 # Cmake find modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 
-find_package(PUGIXML REQUIRED)
-find_package(JSONCPP REQUIRED)
-find_package(PkgConfig)
-
-
-pkg_check_modules(SYSREPO REQUIRED libsysrepo)
-
-add_subdirectory(proto)
+find_package(PUGIXML REQUIRED) #use FindPUGIXML.cmake
+find_package(JSONCPP REQUIRED) #use FindJSONCPP.cmake
+find_package(PkgConfig) #official cmake module
+pkg_check_modules(SYSREPO REQUIRED libsysrepo) #PkgConfig cmake module maccro
 
 if(LIBPUGIXML_FOUND)
     message ("PUGIXML found")
@@ -48,6 +42,23 @@ if(LIBJSONCPP_FOUND)
 else()
     message (FATAL_ERROR "Cannot find LIBJSONCPP")
 endif()
+
+# DEPENDENCIES & COMPILATION OF GNMI PROTO
+##########################################
+
+# set compiler and linker flags
+set(RIGOROUS_C_FLAGS "-Wlogical-op -Wold-style-cast -Wuseless-cast")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++11 ${RIGOROUS_C_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -std=c++11 -DNDEBUG -O2 ${RIGOROUS_C_FLAGS}")
+set(CMAKE_CXX_FLAGS_DEBUG   "-Wall -Wextra -std=c++11 -g -O0 ${RIGOROUS_C_FLAGS}")
+
+add_subdirectory(proto)
+
+# COMPILER & LINKER
+###################
+
+# Generate a compile_commands.json with compile options
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 set(GNMI_SRC main.cpp
     log.cpp
@@ -65,9 +76,13 @@ target_include_directories(gnmi_server PRIVATE ${PROTOBUF_INCLUDE_DIR}
                              ${LIBJSONCPP_INCLUDE_DIR}
                              ${SYSREPO_INCLUDE_DIRS})
 
-target_link_libraries(gnmi_server proto
+# link gnmi_server executable with protobuf, grpc, pugixml, sysrepo libraries
+target_link_libraries(gnmi_server gnmi
                         ${LIBPUGIXML_LIBRARY}
                         ${LIBJSONCPP_LIBRARY}
                         ${SYSREPO_LIBRARIES})
+
+# INSTALL
+#########
 
 install(TARGETS gnmi_server RUNTIME DESTINATION bin)
