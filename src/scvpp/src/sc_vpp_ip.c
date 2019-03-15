@@ -41,11 +41,16 @@ bin_api_sw_interface_add_del_address(u32 sw_if_index, bool is_add, bool is_ipv6,
 
     mp->payload.sw_if_index = sw_if_index;
     mp->payload.is_add = is_add;
-    mp->payload.is_ipv6 = is_ipv6;
     mp->payload.del_all = del_all;
-    mp->payload.address_length = address_length;
-    if (sc_aton(ip_address, mp->payload.address, sizeof(mp->payload.address)))
-        return VAPI_EINVAL;
+
+    mp->payload.prefix.address_length = address_length;
+    if (is_ipv6) {
+        mp->payload.prefix.address.af = ADDRESS_IP6;
+        sc_aton(ip_address, mp->payload.prefix.address.un.ip4, VPP_IP4_ADDRESS_LEN);
+    } else {
+        mp->payload.prefix.address.af = ADDRESS_IP4;
+        sc_aton(ip_address, mp->payload.prefix.address.un.ip6, VPP_IP6_ADDRESS_LEN);
+    }
 
     VAPI_CALL(vapi_sw_interface_add_del_address(g_vapi_ctx_instance, mp,
                                         sw_interface_add_del_address_cb, NULL));
