@@ -43,6 +43,8 @@ sw_interface_dump_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
                      vapi_error_e rv, bool is_last,
                      vapi_payload_sw_interface_details *reply)
 {
+    UNUSED(rv); UNUSED(ctx); UNUSED(is_last);
+
     vapi_payload_sw_interface_details *passed;
 
     ARG_CHECK(-EINVAL, callback_ctx);
@@ -83,6 +85,7 @@ interface_dump_all_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
                           vapi_error_e rv, bool is_last,
                           vapi_payload_sw_interface_details * reply)
 {
+    UNUSED(ctx); UNUSED(rv);
     dump_all_ctx *dctx = callback_ctx;
 
     if (is_last)
@@ -100,7 +103,8 @@ interface_dump_all_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
     vpp_interface_t * iface = &dctx->intfcArray[dctx->num_ifs];
 
     iface->sw_if_index = reply->sw_if_index;
-    strncpy(iface->interface_name, reply->interface_name, VPP_INTFC_NAME_LEN);
+    strncpy(iface->interface_name, (char*) reply->interface_name,
+            VPP_INTFC_NAME_LEN);
     iface->l2_address_length = reply->l2_address_length;
     memcpy(iface->l2_address, reply->l2_address, reply->l2_address_length );
     iface->link_speed = reply->link_speed;
@@ -145,6 +149,8 @@ get_interface_id_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
                       vapi_error_e rv, bool is_last,
                       vapi_payload_sw_interface_details * reply)
 {
+    UNUSED(ctx); UNUSED(rv);
+
     sw_interface_details_query_t *dctx = callback_ctx;
     assert(dctx);
 
@@ -221,28 +227,6 @@ bin_api_sw_interface_set_flags(uint32_t if_index, uint8_t up)
 
     vapi_error_e rv;
     VAPI_CALL(vapi_sw_interface_set_flags(g_vapi_ctx_instance, mp, sw_interface_set_flags_cb, NULL));
-
-    return rv;
-}
-
-VAPI_RETVAL_CB(sw_interface_set_l2_bridge);
-
-//set interface l2 bridge <interface> <bridge-domain-id> [bvi|uu-fwd] [shg]
-static vapi_error_e
-bin_api_sw_interface_set_l2_bridge(u32 bd_id, u32 rx_sw_if_index, bool enable)
-{
-    vapi_msg_sw_interface_set_l2_bridge *mp;
-    vapi_error_e rv;
-
-    mp = vapi_alloc_sw_interface_set_l2_bridge (g_vapi_ctx_instance);
-    assert(NULL != mp);
-
-    mp->payload.enable = enable;
-    mp->payload.bd_id = bd_id;
-    mp->payload.rx_sw_if_index = rx_sw_if_index;
-
-    VAPI_CALL(vapi_sw_interface_set_l2_bridge (g_vapi_ctx_instance, mp,
-                                        sw_interface_set_l2_bridge_cb, NULL));
 
     return rv;
 }

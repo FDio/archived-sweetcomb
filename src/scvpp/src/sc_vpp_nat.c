@@ -24,13 +24,12 @@
 DEFINE_VAPI_MSG_IDS_NAT_API_JSON
 
 static vapi_error_e
-nat44_interface_dump_cb(
-    __attribute__((unused)) struct vapi_ctx_s *ctx,
-    void *callback_ctx,
-    __attribute__((unused)) vapi_error_e rv,
-    bool is_last,
-    vapi_payload_nat44_interface_details *reply)
+nat44_interface_dump_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
+                        vapi_error_e rv, bool is_last,
+                        vapi_payload_nat44_interface_details *reply)
 {
+    UNUSED(ctx);
+    UNUSED(rv);
     vapi_payload_nat44_interface_details *dctx = callback_ctx;
     assert(dctx);
 
@@ -138,12 +137,11 @@ bin_api_nat44_add_del_static_mapping(
 }
 
 static vapi_error_e nat44_static_mapping_dump_cb(
-    __attribute__((unused)) struct vapi_ctx_s *ctx,
-    void *callback_ctx,
-    __attribute__((unused)) vapi_error_e rv,
-    bool is_last,
-    vapi_payload_nat44_static_mapping_details *reply)
+    struct vapi_ctx_s *ctx, void *callback_ctx, vapi_error_e rv,
+    bool is_last,vapi_payload_nat44_static_mapping_details *reply)
 {
+    UNUSED(rv);
+    UNUSED(ctx);
     vapi_payload_nat44_static_mapping_details *dctx = callback_ctx;
     assert(dctx);
 

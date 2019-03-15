@@ -64,11 +64,17 @@ DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
     ARG_CHECK(retval, arg3); \
     ARG_CHECK(retval, arg4)
 
+/* Suppress compiler warning about unused variable.
+ * This must be used only for callback function else suppress your unused
+ * parameter in function prototype. */
+#define UNUSED(x) (void)x
+
 #define VAPI_RETVAL_CB(api_name) \
 static vapi_error_e \
 api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
                 vapi_payload_##api_name##_reply * reply) \
 { \
+    UNUSED(ctx); UNUSED(caller_ctx); UNUSED(rv); UNUSED(is_last); \
     return reply->retval; \
 }
 
@@ -77,6 +83,7 @@ static vapi_error_e \
 api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
                 vapi_payload_##api_name##_reply * reply) \
 { \
+    UNUSED(ctx); UNUSED(rv); UNUSED(is_last); \
     if (caller_ctx) \
     { \
         vapi_payload_##api_name##_reply * passed = (vapi_payload_##api_name##_reply *)caller_ctx; \
