@@ -34,7 +34,7 @@ void sw_interface_details_query_set_name(sw_interface_details_query_t * query,
 
     memset(query, 0, sizeof(*query));
 
-    strncpy((char*) query->sw_interface_details.interface_name.buf, interface_name,
+    strncpy((char*) query->sw_interface_details.interface_name, interface_name,
             sizeof(query->sw_interface_details.interface_name));
 }
 
@@ -68,7 +68,7 @@ bin_api_sw_interface_dump(vapi_payload_sw_interface_details *details)
     mp = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
 
     mp->payload.name_filter_valid = 0;
-    memset(mp->payload.name_filter.buf, 0, sizeof(mp->payload.name_filter));
+    memset(mp->payload.name_filter, 0, sizeof(mp->payload.name_filter));
     assert(NULL != mp);
 
     VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx_instance, mp, sw_interface_dump_cb, details));
@@ -100,23 +100,14 @@ interface_dump_all_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
     vpp_interface_t * iface = &dctx->intfcArray[dctx->num_ifs];
 
     iface->sw_if_index = reply->sw_if_index;
-    strncpy(iface->interface_name, reply->interface_name.buf, VPP_INTFC_NAME_LEN);
-    iface->l2_address_length = VPP_MAC_ADDRESS_LEN;
-    memcpy(iface->l2_address, reply->l2_address, VPP_MAC_ADDRESS_LEN);
+    strncpy(iface->interface_name, reply->interface_name, VPP_INTFC_NAME_LEN);
+    iface->l2_address_length = reply->l2_address_length;
+    memcpy(iface->l2_address, reply->l2_address, reply->l2_address_length );
     iface->link_speed = reply->link_speed;
 
     iface->link_mtu = reply->link_mtu;
-    if (reply->flags == IF_STATUS_API_FLAG_ADMIN_UP) {
-        iface->admin_up_down = 1;
-        iface->link_up_down = 0;
-    } else if (reply->flags == IF_STATUS_API_FLAG_LINK_UP) {
-        //link up -> administratively up
-        iface->admin_up_down = 1;
-        iface->link_up_down = 1;
-    } else {
-        iface->admin_up_down = 0;
-        iface->link_up_down = 0;
-    }
+    iface->admin_up_down = reply->admin_up_down;
+    iface->link_up_down = reply->link_up_down;
 
     dctx->num_ifs += 1;
 
@@ -140,7 +131,7 @@ int interface_dump_all(dump_all_ctx * dctx)
     dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
 
     dump->payload.name_filter_valid = 0;
-    memset(&dump->payload.name_filter, 0, sizeof(dump->payload.name_filter));
+    memset(dump->payload.name_filter, 0, sizeof(dump->payload.name_filter));
     while (VAPI_EAGAIN ==
            (rv =
             vapi_sw_interface_dump(g_vapi_ctx_instance, dump, interface_dump_all_cb,
@@ -167,8 +158,8 @@ get_interface_id_cb (struct vapi_ctx_s *ctx, void *callback_ctx,
         {
             assert(NULL != reply);
 
-            if (0 == strcmp((const char*)dctx->sw_interface_details.interface_name.buf,
-                            (const char*)reply->interface_name.buf))
+            if (0 == strcmp((const char*)dctx->sw_interface_details.interface_name,
+                            (const char*)reply->interface_name))
             {
                 dctx->interface_found = true;
                 dctx->sw_interface_details = *reply;
@@ -192,9 +183,8 @@ int get_interface_id(sw_interface_details_query_t * sw_interface_details_query)
     assert(NULL != mp);
 
     mp->payload.name_filter_valid = true;
-    strncpy(mp->payload.name_filter.buf,
-            sw_interface_details_query->sw_interface_details.interface_name.buf,
-            VPP_INTFC_NAME_LEN);
+    memcpy(mp->payload.name_filter, sw_interface_details_query->sw_interface_details.interface_name,
+           sizeof(mp->payload.name_filter));
 
     VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx_instance, mp, get_interface_id_cb, sw_interface_details_query));
     if (VAPI_OK != rv)
@@ -227,7 +217,7 @@ bin_api_sw_interface_set_flags(uint32_t if_index, uint8_t up)
     assert(NULL != mp);
 
     mp->payload.sw_if_index = if_index;
-    mp->payload.flags = IF_STATUS_API_FLAG_ADMIN_UP;
+    mp->payload.admin_up_down = up;
 
     vapi_error_e rv;
     VAPI_CALL(vapi_sw_interface_set_flags(g_vapi_ctx_instance, mp, sw_interface_set_flags_cb, NULL));

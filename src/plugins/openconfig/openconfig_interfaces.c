@@ -222,7 +222,7 @@ static int sw_interface_dump_cb_inner(
         return rc;
     }
 
-    const char* interface_name = (const char*)dctx->sw_interface_details_query.sw_interface_details.interface_name.buf;
+    const char* interface_name = (const char*)dctx->sw_interface_details_query.sw_interface_details.interface_name;
 
     sr_val_build_xpath(&vals[0], "%s/name", dctx->sysr_values_ctx.xpath_root);
     sr_val_set_str_data(&vals[0], SR_STRING_T, interface_name);
@@ -245,30 +245,23 @@ static int sw_interface_dump_cb_inner(
 
     sr_val_build_xpath(&vals[5], "%s/enabled",
                        dctx->sysr_values_ctx.xpath_root);
-    sr_val_build_xpath(&vals[7], "%s/admin-status",
-                       dctx->sysr_values_ctx.xpath_root);
     vals[5].type = SR_BOOL_T;
-    if (reply->flags == IF_STATUS_API_FLAG_ADMIN_UP ||
-        reply->flags == IF_STATUS_API_FLAG_LINK_UP) {
-        vals[5].data.bool_val = true;
-        sr_val_set_str_data(&vals[7], SR_ENUM_T, "UP");
-    } else {
-        vals[5].data.bool_val = false;
-        sr_val_set_str_data(&vals[7], SR_ENUM_T, "DOWN");
-    }
+    vals[5].data.bool_val = reply->admin_up_down;
 
     sr_val_build_xpath(&vals[6], "%s/ifindex",
                        dctx->sysr_values_ctx.xpath_root);
     vals[6].type = SR_UINT32_T;
     vals[6].data.uint32_val = reply->sw_if_index;
 
+    sr_val_build_xpath(&vals[7], "%s/admin-status",
+                       dctx->sysr_values_ctx.xpath_root);
+    sr_val_set_str_data(&vals[7], SR_ENUM_T,
+                        reply->admin_up_down ? "UP" : "DOWN");
 
     sr_val_build_xpath(&vals[8], "%s/oper-status",
                        dctx->sysr_values_ctx.xpath_root);
-    if (reply->flags == IF_STATUS_API_FLAG_LINK_UP)
-        sr_val_set_str_data(&vals[8], SR_ENUM_T, "UP");
-    else
-        sr_val_set_str_data(&vals[8], SR_ENUM_T, "DOWN");
+    sr_val_set_str_data(&vals[8], SR_ENUM_T,
+                        reply->link_up_down ? "UP" : "DOWN");
 
     //TODO: Openconfig required this value
     // sr_val_build_xpath(&vals[9], "%s/last-change", dctx->sysr_values_ctx.xpath_root);
@@ -314,12 +307,7 @@ static int sw_subinterface_dump_cb_inner(
     sr_val_build_xpath(&vals[val_idx], "%s/enabled",
                        dctx->sysr_values_ctx.xpath_root);
     vals[val_idx].type = SR_BOOL_T;
-    if (reply->flags == IF_STATUS_API_FLAG_LINK_UP ||
-        reply->flags == IF_STATUS_API_FLAG_ADMIN_UP) {
-        vals[val_idx++].data.bool_val = true;
-    } else {
-        vals[val_idx++].data.bool_val = false;
-    }
+    vals[val_idx++].data.bool_val = reply->admin_up_down;
 
     //TODO: Openconfig required this value
     // sr_val_build_xpath(&vals[val_idx], "%s/name", dctx->sysr_values_ctx.xpath_root);
@@ -331,21 +319,13 @@ static int sw_subinterface_dump_cb_inner(
 
     sr_val_build_xpath(&vals[val_idx], "%s/admin-status",
                        dctx->sysr_values_ctx.xpath_root);
-    if (reply->flags == IF_STATUS_API_FLAG_LINK_UP ||
-        reply->flags == IF_STATUS_API_FLAG_ADMIN_UP) {
-        sr_val_set_str_data(&vals[val_idx++], SR_ENUM_T, "UP");
-    } else {
-        sr_val_set_str_data(&vals[val_idx++], SR_ENUM_T, "DOWN");
-    }
+    sr_val_set_str_data(&vals[val_idx++], SR_ENUM_T,
+                        reply->admin_up_down ? "UP" : "DOWN");
 
     sr_val_build_xpath(&vals[val_idx], "%s/oper-status",
                        dctx->sysr_values_ctx.xpath_root);
-    if (reply->flags == IF_STATUS_API_FLAG_LINK_UP ||
-        reply->flags == IF_STATUS_API_FLAG_ADMIN_UP) {
-        sr_val_set_str_data(&vals[val_idx++], SR_ENUM_T, "UP");
-    } else {
-        sr_val_set_str_data(&vals[val_idx++], SR_ENUM_T, "DOWN");
-    }
+    sr_val_set_str_data(&vals[val_idx++], SR_ENUM_T,
+                        reply->admin_up_down ? "UP" : "DOWN");
 
     //TODO: Openconfig required this value
     // sr_val_build_xpath(&vals[val_idx], "/openconfig-interfaces:interfaces/interface[name='%s']/subinterfaces/subinterface[index='%s']/state/last-change", interface_name, subinterface_index);
@@ -402,19 +382,19 @@ sw_interface_dump_vapi_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
         assert (NULL != reply);
         sys_sw_interface_dump_ctx *dctx = callback_ctx;
 
-        const char* const dctx_interface_name = (const char *)dctx->sw_interface_details_query.sw_interface_details.interface_name.buf;
+        const char* const dctx_interface_name = (const char *)dctx->sw_interface_details_query.sw_interface_details.interface_name;
 
         SRP_LOG_DBG("interface_name: '%s', if_name: '%s'", reply->interface_name, dctx_interface_name);
 
         if (dctx->is_subif)
         {
-            if (is_subinterface((const char*)reply->interface_name.buf,
+            if (is_subinterface((const char*)reply->interface_name,
                 dctx_interface_name, dctx->subinterface_index))
                 sw_subinterface_dump_cb_inner(reply, dctx);
         }
         else
         {
-            if (0 == strcmp(dctx_interface_name, (char *)reply->interface_name.buf))
+            if (0 == strcmp(dctx_interface_name, (char *)reply->interface_name))
             {
                 dctx->sw_interface_details_query.sw_interface_details = *reply;
                 dctx->sw_interface_details_query.interface_found = true;
@@ -437,7 +417,7 @@ static vapi_error_e sysr_sw_interface_dump(sys_sw_interface_dump_ctx * dctx)
     dump = vapi_alloc_sw_interface_dump(g_vapi_ctx_instance);
 
     dump->payload.name_filter_valid = true;
-    strcpy((char*)dump->payload.name_filter.buf, (const char *)dctx->sw_interface_details_query.sw_interface_details.interface_name.buf);
+    strcpy((char*)dump->payload.name_filter, (const char *)dctx->sw_interface_details_query.sw_interface_details.interface_name);
 
     VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx_instance, dump, sw_interface_dump_vapi_cb,
                                      dctx));

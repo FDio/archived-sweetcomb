@@ -586,7 +586,7 @@ int openconfig_local_routing_local_routes_static_routes_static_next_hops_next_ho
     sr_val_build_xpath(&vals[0], "%s/interface",
                        dctx->sysr_values_ctx.xpath_root);
     sr_val_set_str_data(&vals[0], SR_STRING_T,
-        (const char*)dctx->sw_interface_details_query.sw_interface_details.interface_name.buf);
+        (const char*)dctx->sw_interface_details_query.sw_interface_details.interface_name);
 
     sr_val_build_xpath(&vals[1], "%s/subinterface",
                        dctx->sysr_values_ctx.xpath_root);
@@ -698,7 +698,7 @@ int next_hop_inner(
                 return SR_ERR_INVAL_ARG;
             }
             if (strlen((const char*)
-                dctx.sw_interface_details_query.sw_interface_details.interface_name.buf)) {
+                dctx.sw_interface_details_query.sw_interface_details.interface_name)) {
                 openconfig_local_routing_local_routes_static_routes_static_next_hops_next_hop_interface_ref_state_vapi_cb(&dctx);
             }
         }

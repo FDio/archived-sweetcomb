@@ -48,9 +48,7 @@ static void test_name2index(void **state)
     rc = get_interface_id(&query);
     assert_int_equal(rc, 1);
 
-    //assert_string_equal(iface_name, query.sw_interface_details.interface_name.buf);
-    assert_string_equal(iface_name,
-            vl_api_from_api_string(&query.sw_interface_details.interface_name));
+    assert_string_equal(iface_name, query.sw_interface_details.interface_name);
     assert_int_equal(query.sw_interface_details.sw_if_index, 1);
 }
 
