@@ -20,6 +20,8 @@
 #include <scvpp/comm.h>
 #include <scvpp/interface.h>
 
+#define IFACE_SUBSTR 49
+
 // Use VAPI macros to define symbols
 DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON
 
@@ -53,7 +55,7 @@ bin_api_sw_interface_dump(vapi_payload_sw_interface_details *details,
 
     /* Dump a specific interfaces */
     mp->payload.name_filter_valid = true;
-    strncpy((char *)mp->payload.name_filter, iface_name, VPP_INTFC_NAME_LEN);
+    strncpy((char *)mp->payload.name_filter, iface_name, IFACE_SUBSTR);
 
     VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx, mp,
                                      sw_interface_dump_cb, details));

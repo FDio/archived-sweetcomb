@@ -29,12 +29,12 @@ set(TEST_SRC
 add_executable(scvpp_test ${TEST_SRC})
 target_link_libraries(scvpp_test ${CMOCKA_LIBRARIES} scvpp_a)
 target_include_directories(scvpp_test PRIVATE ../inc)
-add_test(scvpp_test scvpp_test)
+add_test(scvpp_test ./scvpp_test)
 
 if(valgrind_FOUND)
-    add_test(${TEST_NAME}_valgrind valgrind
+    add_test(scvpp_valgrind valgrind
         --error-exitcode=1 --read-var-info=yes
         --leak-check=full --show-leak-kinds=all
-        ./${TEST_NAME}
+        ./scvpp_test
     )
 endif(valgrind_FOUND)

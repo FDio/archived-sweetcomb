@@ -381,7 +381,7 @@ oc_next_hop_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt,
                        VPP_IP4_PREFIX_STRING_LEN, &state);
 
     rc |= get_xpath_key(index, (char*)xpath, "next-hop", "index",
-                       VPP_IP4_PREFIX_STRING_LEN, &state);
+                        HOP_INDEX_SIZE, &state);
 
     if (rc != 0)
         return SR_ERR_INVAL_ARG;

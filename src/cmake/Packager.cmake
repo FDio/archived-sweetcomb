@@ -33,7 +33,7 @@ macro(make_packages)
       set(OS_${_name} ${_value})
     endforeach()
 
-    # extract version from git
+    #extract version from git
     execute_process(
       COMMAND git describe --long --match v*
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -50,6 +50,8 @@ macro(make_packages)
     string(REPLACE "-" "~" tag ${tag})
     list(GET VER 1 commit_num)
     list(GET VER 2 commit_name)
+
+    message("${tag}")
 
     if (NOT DEFINED ENV{BUILD_NUMBER})
       set(bld "b1")
