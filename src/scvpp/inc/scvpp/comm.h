@@ -142,7 +142,7 @@ static inline int push(struct elt **stack, void *data, int length)
 
     memcpy(el->data, data, length);
     if (*stack)
-        el->id = (*stack)->id++;
+        el->id = (*stack)->id + 1;
     else
         el->id = 0;
     el->next = *stack; //point to old value of stack
@@ -174,8 +174,13 @@ static vapi_error_e \
 api_name##_all_cb(vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
               vapi_payload_##api_name##_details *reply) \
 { \
-    UNUSED(ctx); UNUSED(rv); UNUSED(is_last); \
+    UNUSED(ctx); UNUSED(rv); \
     struct elt **stackp; \
+    \
+    if (is_last) { \
+        return VAPI_OK; \
+    } \
+    \
     ARG_CHECK2(VAPI_EINVAL, caller_ctx, reply); \
     \
     stackp = (struct elt**) caller_ctx; \
