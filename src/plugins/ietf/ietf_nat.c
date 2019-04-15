@@ -93,7 +93,7 @@ static int parse_instance_policy_external_ip_address_pool(
     if (sr_xpath_node_name_eq(val->xpath, "pool-id")) {
         SRP_LOG_WRN("%s not supported.", val->xpath);
     } else if(sr_xpath_node_name_eq(val->xpath, "external-ip-pool")) {
-        rc = prefix2address(tmp_str, val->data.string_val, &prefix);
+        rc = prefix2ip4(tmp_str, val->data.string_val, &prefix);
         if (0 != rc) {
             SRP_LOG_ERR_MSG("Error translate");
             return SR_ERR_INVAL_ARG;
@@ -336,7 +336,7 @@ static int parse_instance_mapping_table_mapping_entry(
             return SR_ERR_INVAL_ARG;
         }
 
-        rc = prefix2address(tmp_str, val->data.string_val, NULL);
+        rc = prefix2ip4(tmp_str, val->data.string_val, NULL);
         if (0 != rc) {
             SRP_LOG_ERR_MSG("Error translate");
             return SR_ERR_INVAL_ARG;
@@ -357,7 +357,7 @@ static int parse_instance_mapping_table_mapping_entry(
             return SR_ERR_INVAL_ARG;
         }
 
-        rc = prefix2address(tmp_str, val->data.string_val, NULL);
+        rc = prefix2ip4(tmp_str, val->data.string_val, NULL);
         if (0 != rc) {
             SRP_LOG_ERR_MSG("Error translate");
             return SR_ERR_INVAL_ARG;

@@ -89,13 +89,12 @@ static inline int ip_prefix_split(const char* ip_prefix)
  * @brief Get IPv4 host address from IPv4 prefix.
  *
  * @param[out] dst Host IPv4 address.
- * @param[in] src IPv4 Prefix.
- * @param[in] length dst buffer length.
+ * @param[in] src IPv4 prefix.
  * @param[out] prefix Get Prefix length, optional value. Can be NULL.
  * @return -1 when failure, 0 on success.
  */
 static inline int
-prefix2address(char *dst, const char *src, uint8_t *prefix_length)
+prefix2ip4(char *dst, const char *src, uint8_t *prefix_length)
 {
     if (!src || !dst)
         return -1;
@@ -104,10 +103,41 @@ prefix2address(char *dst, const char *src, uint8_t *prefix_length)
     if (!p)
         return -1; // '/' not found
 
-    if ((p - src + 1) > VPP_IP4_ADDRESS_STRING_LEN) //+ 1 needed for \0
+    size_t size = p - src;
+    if ((size + 1) > VPP_IP4_ADDRESS_STRING_LEN) //+ 1 needed for \0
         return -1;
 
-    strncpy(dst, src, VPP_IP4_ADDRESS_STRING_LEN);
+    strncpy(dst, src, size);
+
+    if (!prefix_length)
+        *prefix_length = atoi(++p);
+
+    return 0;
+}
+
+/**
+ * @brief Get IPv6 host address from IPv6 prefix.
+ *
+ * @param[out] dst Host IPv6 address.
+ * @param[in] src IPv6 prefix.
+ * @param[out] prefix Get Prefix length, optional value. Can be NULL.
+ * @return -1 when failure, 0 on success.
+ */
+static inline int
+prefix2ip6(char *dst, const char *src, uint8_t *prefix_length)
+{
+    if (!src || !dst)
+        return -1;
+
+    char *p = strchr(src, '/');
+    if (!p)
+        return -1; // '/' not found
+
+    size_t size = p - src;
+    if ((size + 1) > VPP_IP6_ADDRESS_STRING_LEN) //+ 1 needed for \0
+        return -1;
+
+    strncpy(dst, src, size);
 
     if (!prefix_length)
         *prefix_length = atoi(++p);

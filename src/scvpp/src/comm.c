@@ -99,6 +99,34 @@ char* sc_ntoa(const u8 * buf)
     return inet_ntoa(addr);
 }
 
+int sc_pton(int af, const char *cp, u8 * buf)
+{
+    ARG_CHECK2(false, cp, buf);
+
+    int ret = inet_pton(af, cp, buf);
+
+    if (0 == ret)
+        return -EINVAL;
+
+    return 0;
+}
+
+char* sc_ntop(int af, const u8 * buf, char *addr)
+{
+    ARG_CHECK(NULL, buf);
+    ARG_CHECK(NULL, addr);
+
+    socklen_t size = 0;
+    if (af == AF_INET)
+        size = INET_ADDRSTRLEN;
+    else if (af == AF_INET6)
+        size = INET6_ADDRSTRLEN;
+    else
+        return NULL;
+
+    return inet_ntop(af, (void*)buf, addr, size);
+}
+
 /**
  * @brief Function converts the u8 array from network byte order to host byte order.
  *
