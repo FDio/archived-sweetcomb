@@ -28,6 +28,7 @@
 export WS_ROOT=$(CURDIR)
 export BR=$(WS_ROOT)/build-root
 PLATFORM?=sweetcomb
+REBUILD_DOCKER_IMAGE?=no
 
 ##############
 #OS Detection#
@@ -244,25 +245,29 @@ build-package:
 	rm -rf $(BR)/build-package/_CPack_Packages;
 
 install-models:
-	@cd src/plugins/yang/ietf \
-	&& sysrepoctl --install --yang=ietf-ip@2014-06-16.yang \
-	&& sysrepoctl --install --yang=ietf-nat@2017-11-16.yang \
-	&& sysrepoctl --install --yang=iana-if-type@2017-01-19.yang \
-	&& sysrepoctl -e if-mib -m ietf-interfaces;
-	@cd src/plugins/yang/openconfig \
-	&& sysrepoctl -S --install --yang=openconfig-local-routing@2017-05-15.yang \
-	&& sysrepoctl -S --install --yang=openconfig-interfaces@2018-08-07.yang \
-	&& sysrepoctl -S --install --yang=openconfig-if-ip@2018-01-05.yang;
+	@cd src/plugins/yang/ietf; \
+	sysrepoctl --install --yang=iana-if-type@2017-01-19.yang > /dev/null; \
+	sysrepoctl --install --yang=ietf-interfaces@2018-02-20.yang > /dev/null; \
+	sysrepoctl --install --yang=ietf-ip@2014-06-16.yang > /dev/null; \
+	sysrepoctl --install --yang=ietf-nat@2017-11-16.yang > /dev/null; \
+	sysrepoctl -e if-mib -m ietf-interfaces;
+	@cd src/plugins/yang/openconfig; \
+	sysrepoctl -S --install --yang=openconfig-local-routing@2017-05-15.yang > /dev/null; \
+	sysrepoctl -S --install --yang=openconfig-interfaces@2018-08-07.yang > /dev/null; \
+	sysrepoctl -S --install --yang=openconfig-if-ip@2018-01-05.yang > /dev/null; \
+	sysrepoctl -S --install --yang=openconfig-acl@2018-11-21.yang > /dev/null;
 
 uninstall-models:
-	@sysrepoctl -u -m openconfig-if-ip \
-	&& sysrepoctl -u -m openconfig-if-aggregate \
-	&& sysrepoctl -u -m openconfig-local-routing \
-	&& sysrepoctl -u -m openconfig-interfaces \
-	&& sysrepoctl -u -m openconfig-vlan-types \
-	&& sysrepoctl -u -m ietf-ip \
-	&& sysrepoctl -u -m ietf-nat \
-	&& sysrepoctl -u -m iana-if-type;
+	@ sysrepoctl -u -m ietf-ip > /dev/null; \
+	sysrepoctl -u -m openconfig-acl > /dev/null; \
+	sysrepoctl -u -m openconfig-if-ip > /dev/null; \
+	sysrepoctl -u -m openconfig-local-routing > /dev/null; \
+	sysrepoctl -u -m openconfig-if-aggregate > /dev/null; \
+	sysrepoctl -u -m openconfig-interfaces > /dev/null; \
+	sysrepoctl -u -m ietf-nat > /dev/null; \
+	sysrepoctl -u -m iana-if-type > /dev/null; \
+	sysrepoctl -u -m ietf-interfaces > /dev/null; \
+	sysrepoctl -u -m openconfig-vlan-types > /dev/null;
 
 clean:
 	@if [ -d $(BR)/build-scvpp ] ;   then cd $(BR)/build-scvpp   && make clean; fi
@@ -276,8 +281,8 @@ distclean:
 	@rm -rf $(BR)/build-package
 	@rm -rf $(BR)/build-gnmi
 
-docker: distclean
-	@build-root/scripts/docker.sh
+docker:
+	@build-root/scripts/docker.sh $(REBUILD_DOCKER_IMAGE)
 
 docker-test:
 	@test/run_test.sh

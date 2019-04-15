@@ -18,10 +18,11 @@
 IMAGE="sweetcomb_img"
 CONTAINER="sweetcomb"
 
-#Clean previous build: container and image
+# rebuild env if neccessary
+echo "Remove previous container and image"
 docker rm ${CONTAINER} -f
 docker rmi ${IMAGE} -f
 
-#Rebuild image and container
+echo "Rebuild image and start container"
 docker build -t ${IMAGE} .
 docker run -id --privileged --name ${CONTAINER} ${IMAGE}

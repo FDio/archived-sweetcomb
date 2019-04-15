@@ -22,25 +22,14 @@ def ping(ip):
     subprocess.run("ping -c 4 " + ip, shell=True)
 
 def import_yang_modules():
-    print("Import YANG modules to sysrepo.")
+    print("Import YANG models to sysrepo.")
 
     directory = '/root/src/sweetcomb/'
-    os.chdir(directory + "src/plugins/yang/ietf/")
-    subprocess.run(["sysrepoctl", "--install", "-S", ".",
-                    "--yang=./ietf-interfaces.yang"])
-
-    os.chdir(directory + "src/plugins/yang/openconfig/")
-    subprocess.run(["sysrepoctl", "--install", "-S", ".",
-                    "--yang=./openconfig-interfaces.yang"])
-    subprocess.run(["sysrepoctl", "--install", "-S", ".",
-                    "--yang=./openconfig-if-ip.yang"])
-    subprocess.run(["sysrepoctl", "--install", "-S", ".",
-                    "--yang=./openconfig-local-routing.yang"])
-
-    time.sleep(5)
+    os.chdir(directory)
+    subprocess.run(["make", "uninstall-models"])
+    subprocess.run(["make", "install-models"])
 
     os.chdir(directory + "test/conf/")
-
     print("Import configuration to sysrepo datastore.")
     subprocess.run(["sysrepocfg", "--import=ietf-interfaces.xml",
                     "--datastore=startup", "--format=xml", "--leve=0",
