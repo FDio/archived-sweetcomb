@@ -276,3 +276,9 @@ distclean:
 	@rm -rf $(BR)/build-plugins
 	@rm -rf $(BR)/build-package
 	@rm -rf $(BR)/build-gnmi
+
+docker:
+	@build-root/scripts/docker.sh
+
+docker_test:
+	@test/run_test.sh
