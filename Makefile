@@ -62,7 +62,7 @@ SYSREPO_DEB = libev-dev libavl-dev bison flex libpcre3-dev libprotobuf-c-dev pro
 LIBSSH_DEB = zlib1g-dev
 #Sum dependencies
 DEB_DEPENDS = ${BUILD_DEB} ${NETOPEER2_DEB} ${CHECKSTYLE_DEB} ${SCVPP_DEB} \
-	      ${SYSREPO_DEB} ${LIBSSH-DEV}
+	      ${SYSREPO_DEB} ${LIBSSH-DEB}
 
 #Dependencies for grpc
 DEB_GNMI_DEPENDS = libpugixml-dev libjsoncpp-dev libtool pkg-config
@@ -89,22 +89,23 @@ RPM_GNMI_DEPENDS = pugixml jsoncpp libtool pugixml-devel jsoncpp-devel ${GRPC_RP
 
 .PHONY: help install-dep install-dep-extra install-vpp install-models uninstall-models \
     install-dep-gnmi-extra build-scvpp build-plugins build-gnmi build-package docker \
-    docker_test clean distclean _clean_dl _libssh _libyang _libnetconf2 _sysrepo _netopeer2
+    docker-test clean distclean _clean_dl _libssh _libyang _libnetconf2 _sysrepo _netopeer2
 
 help:
 	@echo "Make Targets:"
 	@echo " install-dep            - install software dependencies"
 	@echo " install-dep-extra      - install software extra dependencies from source code"
 	@echo " install-vpp            - install released vpp"
-	@echo " install-models       - install YANG models"
-	@echo " uninstall-models     - uninstall YANG models"
+	@echo " install-models         - install YANG models"
+	@echo " uninstall-models       - uninstall YANG models"
 	@echo " install-dep-gnmi-extra - install software extra dependencips from source code for gNMI"
 	@echo " build-scvpp            - build scvpp"
+	@echo " test-scvpp             - unit test for scvpp"
 	@echo " build-plugins          - build plugins"
 	@echo " build-gnmi             - build gNMIServer"
 	@echo " build-package          - build rpm or deb package"
 	@echo " docker                 - build sweetcomb in docker enviroment"
-	@echo " docker_test            - run test in docker enviroment"
+	@echo " docker-test            - run test in docker enviroment"
 	@echo " clean                  - clean all build"
 	@echo " distclean              - remove all build directory"
 
@@ -124,17 +125,12 @@ else
 	$(error "This option currently works only on Ubuntu, Debian, Centos or openSUSE systems")
 endif
 
-#Check if libssh already installed in appropriate version
 _libssh:
-ifeq ( $(shell pkg-config libssh --atleast-version=0.6.4 ; echo $$?),0 )
-    echo "libssh already installed in correct version"
-else
-	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
+	mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&wget https://git.libssh.org/projects/libssh.git/snapshot/libssh-0.7.7.tar.gz\
 	&&tar xvf libssh-0.7.7.tar.gz && cd libssh-0.7.7 && mkdir build && cd build\
 	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
-	&&make -j$(nproc) &&sudo make install && sudo ldconfig&&cd ../../
-endif
+	&&make -j$(nproc) &&sudo make install && sudo ldconfig&&cd ../../; \
 
 _libyang:
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
@@ -160,7 +156,7 @@ _sysrepo:
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&wget https://github.com/sysrepo/sysrepo/archive/v0.7.7.tar.gz\
 	&&tar xvf v0.7.7.tar.gz && cd sysrepo-0.7.7 && mkdir -p build && cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
 	-DGEN_LANGUAGE_BINDINGS=OFF -DGEN_CPP_BINDINGS=ON -DGEN_LUA_BINDINGS=OFF \
 	-DGEN_PYTHON_BINDINGS=OFF -DGEN_JAVA_BINDINGS=OFF -DBUILD_EXAMPLES=OFF \
 	-DENABLE_TESTS=OFF ..\
@@ -226,7 +222,10 @@ endif
 build-scvpp:
 	@mkdir -p $(BR)/build-scvpp/; cd $(BR)/build-scvpp; \
 	cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;\
-	make install ; make test
+	make install
+
+test-scvpp: build-scvpp
+	@cd $(BR)/build-scvpp; make test
 
 build-plugins:
 	@mkdir -p $(BR)/build-plugins/; cd $(BR)/build-plugins/; \
@@ -266,10 +265,10 @@ uninstall-models:
 	&& sysrepoctl -u -m iana-if-type;
 
 clean:
-	@cd $(BR)/build-scvpp && make clean;
-	@cd $(BR)/build-plugins && make clean;
-	@cd $(BR)/build-package && make clean;
-	@cd $(BR)/build-gnmi && make clean;
+	@if [ -d $(BR)/build-scvpp ] ;   then cd $(BR)/build-scvpp   && make clean; fi
+	@if [ -d $(BR)/build-plugins ] ; then cd $(BR)/build-plugins && make clean; fi
+	@if [ -d $(BR)/build-package ] ; then cd $(BR)/build-package && make clean; fi
+	@if [ -d $(BR)/build-gnmi ] ;    then cd $(BR)/build-gnmi    && make clean; fi
 
 distclean:
 	@rm -rf $(BR)/build-scvpp
@@ -277,8 +276,8 @@ distclean:
 	@rm -rf $(BR)/build-package
 	@rm -rf $(BR)/build-gnmi
 
-docker:
+docker: distclean
 	@build-root/scripts/docker.sh
 
-docker_test:
+docker-test:
 	@test/run_test.sh

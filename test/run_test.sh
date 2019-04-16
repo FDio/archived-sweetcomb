@@ -25,7 +25,7 @@ function build_enviroment {
         return
     fi
 
-    docker build -t ${IMAGE} ./src/Docker/Build
+    docker build -t ${IMAGE} .
 }
 
 function create_container {
@@ -47,7 +47,6 @@ function start_container {
 }
 
 function build_sweetcomb {
-    docker exec -it ${CONTAINER} bash -c "/root/src/sweetcomb/build-root/scripts/de_build.sh"
     docker exec -it ${CONTAINER} bash -c "apt-get install -y python3-pip && pip3 install pexpect && pip3 install pyroute2"
 }
 
