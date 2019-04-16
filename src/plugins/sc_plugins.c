@@ -15,6 +15,51 @@
 
 #include "sc_plugins.h"
 #include "sc_model.h"
+#include <dirent.h>
+
+static int vpp_pid_start;
+
+/* get vpp pid in system */
+int get_vpp_pid()
+{
+    DIR *dir;
+    struct dirent *ptr;
+    FILE *fp;
+    char filepath[50];
+    char filetext[20];
+
+    dir = opendir("/proc");
+    int vpp_pid = 0;
+    /* read vpp pid file in proc, return pid of vpp */
+    if (NULL != dir)
+    {
+        while (NULL != (ptr =readdir(dir)))
+        {
+            if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
+                continue;
+
+            if (DT_DIR != ptr->d_type)
+                continue;
+
+            sprintf(filepath, "/proc/%s/cmdline",ptr->d_name);
+            fp = fopen(filepath, "r");
+
+            if (NULL != fp)
+            {
+                fread(filetext, 1, 13, fp);
+                filetext[12] = '\0';
+
+                if (filetext == strstr(filetext, "/usr/bin/vpp"))
+                    vpp_pid = atoi(ptr->d_name);
+
+                fclose(fp);
+            }
+        }
+        closedir(dir);
+    }
+    return vpp_pid;
+}
+
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
@@ -38,7 +83,8 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
     /* set subscription as our private context */
     *private_ctx = plugin_main.subscription;
-
+    /* get the vpp pid sweetcomb connected, we assumed that only one vpp is run in system */
+    vpp_pid_start = get_vpp_pid();
     return SR_ERR_OK;
 }
 
@@ -53,3 +99,18 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
     SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
 }
 
+int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)
+{
+   /* health check, will use shell to detect vpp when plugin is loaded */
+   /* health_check will run every 10 seconds in loop*/
+   int vpp_pid_now = get_vpp_pid();
+
+   if(vpp_pid_now == vpp_pid_start)
+       {
+       return SR_ERR_OK;
+       }
+   else
+   {
+       return -1;
+   }
+}
