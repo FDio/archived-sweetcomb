@@ -56,6 +56,7 @@ Then, please start each daemon one by one:
 ```
 
 Now you can utilize Sweetcomb.
+Notice: if you install from package, you should import module by youself.
 
 ## Manual Test
 For example, if you want to configure ipv4 address on HW interface TenGigabitEthernet5/0/0,

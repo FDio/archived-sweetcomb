@@ -25,7 +25,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 find_package(VPP) #use FindVPP.cmake
 find_package(PkgConfig) #official cmake module
 pkg_check_modules(SYSREPO REQUIRED libsysrepo) #PkgConfig cmake module maccro
-pkg_check_modules(SCVPP REQUIRED libscvpp) #PkgConfig cmake module maccro
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../scvpp scvpp_out)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/../scvpp/inc)
 
 # get sysrepo plugins directory from pkgconfig
 if (NOT SR_PLUGINS_DIR)
@@ -63,7 +65,7 @@ set(PLUGINS_SOURCES
 
 # build the source code into shared library
 add_library(vpp-plugins SHARED ${PLUGINS_SOURCES})
-target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} ${SCVPP_LIBRARIES})
+target_link_libraries(vpp-plugins ${SYSREPO_LIBRARIES} scvpp)
 
 # INSTALL
 #########

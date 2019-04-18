@@ -24,7 +24,7 @@ endif()
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
 
 # add subdirectories
-add_subdirectory(scvpp)
+# add_subdirectory(scvpp)
 add_subdirectory(plugins)
 
 include(Packager)
