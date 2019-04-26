@@ -52,7 +52,7 @@ endif
 #Dependencies to build
 BUILD_DEB = curl build-essential autoconf automake ccache git cmake wget coreutils
 #Dependencies for netopeer2
-NETOPEER2_DEB = libssl-dev
+NETOPEER2_DEB = libssl-dev pkgconf
 #Dependencies for checkstyle
 CHECKSTYLE_DEB = indent
 #Dependencies for scvpp
@@ -62,8 +62,7 @@ SYSREPO_DEB = libev-dev libavl-dev bison flex libpcre3-dev libprotobuf-c-dev pro
 #Dependencies of libssh
 LIBSSH_DEB = zlib1g-dev
 #Sum dependencies
-DEB_DEPENDS = ${BUILD_DEB} ${NETOPEER2_DEB} ${CHECKSTYLE_DEB} ${SCVPP_DEB} \
-	      ${SYSREPO_DEB} ${LIBSSH-DEB}
+DEB_DEPENDS = ${BUILD_DEB} ${NETOPEER2_DEB} ${CHECKSTYLE_DEB} ${SCVPP_DEB} ${SYSREPO_DEB} ${LIBSSH_DEB}
 
 #Dependencies for grpc
 DEB_GNMI_DEPENDS = libpugixml-dev libjsoncpp-dev libtool pkg-config
@@ -127,11 +126,19 @@ else
 endif
 
 _libssh:
+ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
+	mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
+	&&wget https://git.libssh.org/projects/libssh.git/snapshot/libssh-0.7.7.tar.gz\
+	&&tar xvf libssh-0.7.7.tar.gz && cd libssh-0.7.7 && mkdir build && cd build\
+	&&cmake -DZLIB_LIBRARY=/usr/lib/x86_64-linux-gnu/libz.so -DZLIB_INCLUDE_DIR=/usr/include/ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&make -j$(nproc) &&sudo make install && sudo ldconfig&&cd ../../;
+else ifeq ($(OS_ID),centos)
 	mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&wget https://git.libssh.org/projects/libssh.git/snapshot/libssh-0.7.7.tar.gz\
 	&&tar xvf libssh-0.7.7.tar.gz && cd libssh-0.7.7 && mkdir build && cd build\
 	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
-	&&make -j$(nproc) &&sudo make install && sudo ldconfig&&cd ../../; \
+	&&make -j$(nproc) &&sudo make install && sudo ldconfig&&cd ../../;
+endif
 
 _libyang:
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
@@ -201,12 +208,12 @@ else
 endif
 	@rm -rf $(BR)/downloads
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
-	&& git clone --depth=1 -b v1.16.0 https://github.com/grpc/grpc \
+	&& git clone --depth=1 -b v1.16.1 https://github.com/grpc/grpc \
 	&& cd grpc && git submodule update --init \
-	&& make && make install \
 	&& cd third_party/protobuf \
 	&& ./autogen.sh && ./configure && make install \
-	&&cd ../../.. && rm -rf $(BR)/downloads
+	&& cd ../.. make && make install \
+	&&cd .. && rm -rf $(BR)/downloads
 
 install-vpp:
 	@echo "please install vpp as vpp's guide from source if failed"
