@@ -111,7 +111,7 @@ int sc_pton(int af, const char *cp, u8 * buf)
     return 0;
 }
 
-char* sc_ntop(int af, const u8 * buf, char *addr)
+const char* sc_ntop(int af, const u8 * buf, char *addr)
 {
     ARG_CHECK(NULL, buf);
     ARG_CHECK(NULL, addr);

@@ -20,32 +20,6 @@
 #include <sysrepo/values.h>
 #include <sysrepo/plugins.h>
 
-#define ARG_CHECK(retval, arg) \
-    do \
-    { \
-        if (NULL == (arg)) \
-        { \
-            SRP_LOG_ERR_MSG(#arg ":NULL pointer passed."); \
-            return (retval); \
-        } \
-    } \
-    while (0)
-
-#define ARG_CHECK2(retval, arg1, arg2) \
-    ARG_CHECK(retval, arg1); \
-    ARG_CHECK(retval, arg2)
-
-#define ARG_CHECK3(retval, arg1, arg2, arg3) \
-    ARG_CHECK(retval, arg1); \
-    ARG_CHECK(retval, arg2); \
-    ARG_CHECK(retval, arg3)
-
-#define ARG_CHECK4(retval, arg1, arg2, arg3, arg4) \
-    ARG_CHECK(retval, arg1); \
-    ARG_CHECK(retval, arg2); \
-    ARG_CHECK(retval, arg3); \
-    ARG_CHECK(retval, arg4)
-
 //functions that sysrepo-plugin need
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx);
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx);

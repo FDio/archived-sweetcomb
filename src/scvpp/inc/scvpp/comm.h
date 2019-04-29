@@ -196,7 +196,7 @@ api_name##_all_cb(vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_las
 int sc_aton(const char *cp, u8 * buf, size_t length);
 char * sc_ntoa(const u8 * buf);
 int sc_pton(int af, const char *cp, u8 * buf);
-char * sc_ntop(int af, const u8 * buf, char *addr);
+const char * sc_ntop(int af, const u8 * buf, char *addr);
 
 /**
  * @brief Function converts the u8 array from network byte order to host byte order.

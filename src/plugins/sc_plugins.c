@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#include "sc_plugins.h"
 #include "sc_model.h"
+#include "sc_plugins.h"
 #include <dirent.h>
 
 static int vpp_pid_start;
