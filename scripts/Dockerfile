@@ -5,7 +5,8 @@ FROM ubuntu:18.04
 # Layer2: Install sweetcomb
 
 #Layer 0
-RUN mkdir -p /opt/dev && apt-get update && apt-get install -y build-essential sudo
+RUN mkdir -p /opt/dev && apt-get update &&\
+    apt-get install -y build-essential sudo
 COPY . /opt/dev
 WORKDIR /opt/dev
 RUN make install-dep && make install-dep-extra
@@ -13,12 +14,14 @@ RUN rm -rf /opt/dev/*
 
 #Layer1
 RUN apt-get install -y \
-    #build utils
     sudo curl \
-    #test utils
     inetutils-ping \
     && curl -s https://packagecloud.io/install/repositories/fdio/1904/script.deb.sh | sudo bash \
     && apt-get -y --force-yes install vpp libvppinfra* vpp-plugin-* vpp-dev
+
+RUN apt-get update; \
+    apt-get install -y clang-format python3-pip; \
+    pip3 install pexpect pyroute2 psutil;
 
 #Layer2
 COPY . /root/src/sweetcomb

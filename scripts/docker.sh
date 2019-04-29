@@ -14,15 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 IMAGE="sweetcomb_img"
 CONTAINER="sweetcomb"
 
-# rebuild env if neccessary
 echo "Remove previous container and image"
-docker rm ${CONTAINER} -f
-docker rmi ${IMAGE} -f
+FIND=`docker container ls -a | grep ${CONTAINER}`
+if [ -n "${FIND}" ]; then
+    docker stop ${CONTAINER}
+    docker rm ${CONTAINER} -f
+fi
+FIND=`docker images | grep ${IMAGE}`
+if [ -n "${FIND}" ]; then
+    docker rmi ${IMAGE} -f
+fi
 
 echo "Rebuild image and start container"
-docker build -t ${IMAGE} .
-docker run -id --privileged --name ${CONTAINER} ${IMAGE}
+docker build -t ${IMAGE} -f ./scripts/Dockerfile .

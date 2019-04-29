@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SWEETCOMB_DIR=`dirname $0`/../../
+SWEETCOMB_DIR="./"
 EXIT_CODE=0
 FIX="0"
 FULL="0"
@@ -21,8 +21,6 @@ CHECKSTYLED_FILES=""
 UNCHECKSTYLED_FILES=""
 
 # If the user provides --fix, then actually fix things
-# Note: this is meant for use outside of the CI Jobs, by users cleaning things up
-
 while true; do
 	case ${1} in
 		--fix)
@@ -41,8 +39,8 @@ else
 	FILELIST=$((git diff HEAD~1.. --name-only; git ls-files -m ) | sort -u)
 fi
 
-# Check to make sure we have indent.  Exit if we don't with an error message, but
-# don't *fail*.
+# Check to make sure we have indent. Exit if we don't with an error message,
+# but don't *fail*.
 command -v indent > /dev/null
 if [ $? != 0 ]; then
     echo "Cound not find required command \"indent\".  Checkstyle aborted"
@@ -50,12 +48,12 @@ if [ $? != 0 ]; then
 fi
 indent --version
 
-# Check to make sure we have clang-format.  Exit if we don't with an error message, but
-# don't *fail*.
+# Check to make sure we have clang-format.  Exit if we don't with an error
+# message, but don't *fail*.
 HAVE_CLANG_FORMAT=0
 command -v clang-format > /dev/null
 if [ $? != 0 ]; then
-    echo "Could not find command \"clang-format\". Checking C++ files will cause abort"
+    echo "Could not find command \"clang-format\"."
 else
     clang-format --version
     x=$(echo "" | clang-format 2>&1)
@@ -64,27 +62,25 @@ else
     else
 	echo "Output produced while formatting empty file (expected empty string):"
 	echo "$x"
-        echo "Could not find working \"clang-format\". Checking C++ files will cause abort"
+        echo "Could not find working \"clang-format\"."
     fi
 fi
 
-cd ${SWEETCOMB_DIR}
 git status
 for i in ${FILELIST}; do
-    if [ -f ${i} ] && [ ${i} != "build-root/scripts/checkstyle.sh" ] && [ ${i} != "extras/emacs/fix-coding-style.el" ]; then
-        grep -q "fd.io coding-style-patch-verification: ON" ${i}
-        if [ $? == 0 ]; then
+    if [ -f ${i} ] && [ ${i} != "scripts/checkstyle.sh" ] && [ ${i} != "scripts/fix-coding-style.el" ]; then
             EXTENSION=`basename ${i} | sed 's/^\w\+.//'`
             case ${EXTENSION} in
-                hpp|cpp|cc|hh)
+                hpp|cpp|cc|hh|c|h)
                     CMD="clang-format"
                     if [ ${HAVE_CLANG_FORMAT} == 0 ]; then
-                            echo "C++ file detected. Abort. (missing clang-format)"
+                            echo "C++ file detected. Abort, missing clang-format"
                             exit ${EXIT_CODE}
                     fi
                     ;;
                 *)
                     CMD="indent"
+                    continue
                     ;;
             esac
             CHECKSTYLED_FILES="${CHECKSTYLED_FILES} ${i}"
@@ -128,9 +124,6 @@ for i in ${FILELIST}; do
             if [ -f ${i}.out2 ]; then
                 rm ${i}.out2
             fi
-        else
-            UNCHECKSTYLED_FILES="${UNCHECKSTYLED_FILES} ${i}"
-        fi
     else
         UNCHECKSTYLED_FILES="${UNCHECKSTYLED_FILES} ${i}"
     fi
@@ -144,7 +137,7 @@ else
     echo "*******************************************************************"
     echo "* SWEETCOMB CHECKSTYLE FAILED"
     echo "* CONSULT FAILURE LOG ABOVE"
-    echo "* NOTE: Running 'build-root/scripts/checkstyle.sh --fix' *MAY* fix the issue"
+    echo "* NOTE: Running 'scripts/checkstyle.sh --fix' *MAY* fix the issue"
     echo "*******************************************************************"
 fi
 exit ${EXIT_CODE}

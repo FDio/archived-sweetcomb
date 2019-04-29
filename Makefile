@@ -28,7 +28,6 @@
 export WS_ROOT=$(CURDIR)
 export BR=$(WS_ROOT)/build-root
 PLATFORM?=sweetcomb
-REBUILD_DOCKER_IMAGE?=no
 
 ##############
 #OS Detection#
@@ -108,6 +107,7 @@ help:
 	@echo " docker-test            - run test in docker enviroment"
 	@echo " clean                  - clean all build"
 	@echo " distclean              - remove all build directory"
+	@echo " checkstyle             - check coding style"
 
 install-dep:
 ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
@@ -289,7 +289,7 @@ distclean:
 	@rm -rf $(BR)/build-gnmi
 
 docker:
-	@build-root/scripts/docker.sh $(REBUILD_DOCKER_IMAGE)
+	@scripts/docker.sh
 
 docker-test:
-	@test/run_test.sh
+	@scripts/run_test.sh
