@@ -1,6 +1,32 @@
-# Release Notes    {#release notes}
+# Release Notes    {#release notes
 
+* @subpage release_notes_1904
 * @subpage release_notes_1901
+
+@page release_notes_1904 Release notes for Sweetcomb 19.04
+
+## Northbound Interface
+- Init gNMI Server
+
+## NAT
+- Add IETF NAT Yang Models.
+- Add IETF NAT Translation Layer.
+- Add IETF NAT test cases.
+
+## High Availability
+- Add vpp health check.
+
+## Code Refactor
+- Code global cleanup.
+- Refactor build system.
+- Rework scvpp to be only interface with VAPI.
+- Rework interface and local routing to leverage new scvpp.
+
+## Test Framework
+- Add unit test framework.
+- Add unit test suite for interface and local routing.
+- Build docker environment to test integration of sweetcomb and VPP.
+
 
 @page release_notes_1901 Release notes for Sweetcomb 19.01
 
