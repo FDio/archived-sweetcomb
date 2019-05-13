@@ -42,7 +42,6 @@ void test_nat44_static_mapping(void **state)
             sizeof(map.local_ip_address));
     sc_aton("172.168.8.5", map.external_ip_address,
             sizeof(map.external_ip_address));
-    map.addr_only = 1;
     map.external_sw_if_index = ~0;
     map.is_add = 1;
 
@@ -51,8 +50,6 @@ void test_nat44_static_mapping(void **state)
 
     rc = nat44_static_mapping_dump(&dump);
     assert_int_equal(rc, SCVPP_OK);
-
-    assert_int_equal(dump.addr_only, map.addr_only);
 
     assert_memory_equal(dump.local_ip_address, map.local_ip_address,
                         sizeof(dump.local_ip_address));
@@ -70,8 +67,6 @@ void test_nat44_static_mapping(void **state)
 
     rc = nat44_static_mapping_dump(&dump);
     assert_int_equal(rc, SCVPP_OK);
-
-    assert_int_equal(dump.addr_only, 0);
 
     assert_memory_equal(dump.local_ip_address, empty_ip,
                         sizeof(dump.local_ip_address));
@@ -119,8 +114,6 @@ void test_nat44_static_mapping_with_ports(void **state)
 
     map.protocol = 6;
 
-    map.addr_only = 0;
-
     map.external_sw_if_index = ~0;
 
     map.external_port = eport;
@@ -133,8 +126,6 @@ void test_nat44_static_mapping_with_ports(void **state)
 
     rc = nat44_static_mapping_dump(&dump);
     assert_int_equal(rc, SCVPP_OK);
-
-    assert_int_equal(dump.addr_only, map.addr_only);
 
     assert_memory_equal(dump.local_ip_address, map.local_ip_address,
                         sizeof(dump.local_ip_address));
@@ -157,8 +148,6 @@ void test_nat44_static_mapping_with_ports(void **state)
 
     rc = nat44_static_mapping_dump(&dump);
     assert_int_equal(rc, SCVPP_OK);
-
-    assert_int_equal(dump.addr_only, 0);
 
     assert_memory_equal(dump.local_ip_address, empty_ip,
                         sizeof(dump.local_ip_address));
