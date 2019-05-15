@@ -15,6 +15,7 @@
 # limitations under the License.
 
 IMAGE="sweetcomb_img"
+IMAGE_TEST="sweetcomb_test_img"
 CONTAINER="sweetcomb_test"
 
 FIND=`docker container ls -a | grep ${CONTAINER}`
@@ -25,12 +26,19 @@ if [ -n "${FIND}" ]; then
 fi
 
 FIND=`docker images | grep ${IMAGE}`
-if [ -z "${FIND}" ]; then
+if [ -z "${FIND}" ] || [ "$REBUILD_DOCKER_IMAGE" == "yes" ]; then
     ./scripts/docker.sh
 fi
 
+FIND=`docker images | grep ${IMAGE_TEST}`
+if [ -z "${FIND}" ] || [ "$REBUILD_DOCKER_IMAGE" == "yes" ]; then
+    echo "Rebuild test image"
+    docker rmi ${IMAGE_TEST} -f > /dev/null 2>&1
+    docker build -t ${IMAGE_TEST} -f ./scripts/Test.Dockerfile .
+fi
+
 echo "Start container"
-docker run -id --privileged --name ${CONTAINER} ${IMAGE}
+docker run -id --privileged --name ${CONTAINER} ${IMAGE_TEST}
 docker cp . ${CONTAINER}:/root/src/sweetcomb
 docker exec -it ${CONTAINER} bash -c "
     cd /root/src/sweetcomb &&

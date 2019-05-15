@@ -1,5 +1,7 @@
 FROM ubuntu:18.04
 
+ARG vpp_version=release
+
 # Layer0: Prepare sweetcomb environement by installing sysrepo, netopeer2 & vpp
 # Layer1: Install vpp
 # Layer2: Install sweetcomb
@@ -16,12 +18,8 @@ RUN rm -rf /opt/dev/*
 RUN apt-get install -y \
     sudo curl \
     inetutils-ping \
-    && curl -s https://packagecloud.io/install/repositories/fdio/1904/script.deb.sh | sudo bash \
+    && curl -s https://packagecloud.io/install/repositories/fdio/$vpp_version/script.deb.sh | sudo bash \
     && apt-get -y --force-yes install vpp libvppinfra* vpp-plugin-* vpp-dev
-
-RUN apt-get update; \
-    apt-get install -y clang-format python3-pip; \
-    pip3 install pexpect pyroute2 psutil;
 
 #Layer2
 COPY . /root/src/sweetcomb

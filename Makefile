@@ -28,6 +28,8 @@
 export WS_ROOT=$(CURDIR)
 export BR=$(WS_ROOT)/build-root
 PLATFORM?=sweetcomb
+export VPP_VERSION?=release
+export REBUILD_DOCKER_IMAGE?=no
 
 ##############
 #OS Detection#
@@ -103,8 +105,11 @@ help:
 	@echo " build-plugins          - build plugins"
 	@echo " build-gnmi             - build gNMIServer"
 	@echo " build-package          - build rpm or deb package"
-	@echo " docker                 - build sweetcomb in docker enviroment"
-	@echo " docker-test            - run test in docker enviroment"
+	@echo " docker                 - build sweetcomb in docker enviroment, with optional arguments :"
+	@echo "                          VPP_VERSION=release [master|release] specifies VPP version to be used"
+	@echo "                          REBUILD_DOCKER_IMAGE=no [yes|no] force rebuild docker image"
+	@echo " docker-test            - run test in docker enviroment, with optional argument :"
+	@echo "                          REBUILD_DOCKER_IMAGE=no [yes|no] force rebuild docker image"
 	@echo " clean                  - clean all build"
 	@echo " distclean              - remove all build directory"
 	@echo " checkstyle             - check coding style"
