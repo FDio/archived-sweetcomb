@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2018 HUACHENTEL and/or its affiliates.
+ * Copyright (c) 2019 Cisco and/or its affiliates.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at:
@@ -17,8 +19,14 @@
 
 #include <dirent.h>
 
-sc_plugin_main_t sc_plugin_main;
+#include <vom/hw.hpp>
+#include <vom/om.hpp>
+
 static int vpp_pid_start;
+
+sc_plugin_main_t sc_plugin_main;
+
+using namespace VOM;
 
 sc_plugin_main_t *sc_get_plugin_main()
 {
@@ -73,11 +81,16 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
     sc_plugin_main.session = session;
 
-    rc = sc_connect_vpp();
-    if (0 != rc) {
-        SRP_LOG_ERR("vpp connect error , with return %d.", rc);
-        return SR_ERR_INTERNAL;
-    }
+    HW::init();
+    OM::init();
+
+    SRP_LOG_INF_MSG("Connect to VPP");
+
+    while (HW::connect() != true);
+
+    SRP_LOG_INF_MSG("Success connect to VPP");
+
+    OM::populate("boot");
 
     rc = sc_call_all_init_function(&sc_plugin_main);
     if (rc != SR_ERR_OK) {
@@ -98,10 +111,10 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 
     /* subscription was set as our private context */
     if (private_ctx != NULL)
-        sr_unsubscribe(session, private_ctx);
+        sr_unsubscribe(session, (sr_subscription_ctx_t*) private_ctx);
     SRP_LOG_DBG_MSG("unload plugin ok.");
 
-    sc_disconnect_vpp();
+    HW::disconnect();
     SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
 }
 
@@ -111,12 +124,24 @@ int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)
    /* health_check will run every 10 seconds in loop*/
    int vpp_pid_now = get_vpp_pid();
 
+   //TODO: Test what do
+//    HW::read_stats();
+
    if(vpp_pid_now == vpp_pid_start)
        {
        return SR_ERR_OK;
        }
    else
    {
-       return -1;
+       SRP_LOG_DBG_MSG("Try connect to VPP");
+       HW::disconnect();
+       while (HW::connect() != true)
+       {
+           SRP_LOG_DBG_MSG("Try connect to VPP");
+       };
+
+       SRP_LOG_DBG_MSG("Connect to VPP");
+       OM::replay();
+       return SR_ERR_OK;
    }
 }

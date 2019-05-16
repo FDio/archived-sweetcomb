@@ -16,10 +16,20 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
-#include <sc_plugins.h>
+#include <vom/interface.hpp>
+#include <vom/om.hpp>
+#include <vom/l3_binding.hpp>
+#include <vom/l3_binding_cmds.hpp>
+#include <vom/route.hpp>
 
-#include <scvpp/interface.h>
-#include <scvpp/ip.h>
+#include <string>
+#include <exception>
+
+#include "sc_plugins.h"
+
+using namespace VOM;
+
+#define MODULE_NAME "ietf-interfaces"
 
 /**
  * @brief Callback to be called by any config change of
@@ -30,13 +40,14 @@ ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath,
                                  sr_notif_event_t event, void *private_ctx)
 {
     UNUSED(private_ctx);
-    char *if_name = NULL;
-    sr_change_iter_t *iter = NULL;
+    char *if_name = nullptr;
+    sr_change_iter_t *iter = nullptr;
     sr_change_oper_t op = SR_OP_CREATED;
-    sr_val_t *old_val = NULL;
-    sr_val_t *new_val = NULL;
+    sr_val_t *old_val = nullptr;
+    sr_val_t *new_val = nullptr;
     sr_xpath_ctx_t xpath_ctx = { 0, };
     int rc = SR_ERR_OK, op_rc = SR_ERR_OK;
+    rc_t vom_rc = rc_t::OK;
 
     SRP_LOG_INF("In %s", __FUNCTION__);
 
@@ -58,13 +69,25 @@ ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath,
 
         SRP_LOG_DBG("A change detected in '%s', op=%d", new_val ? new_val->xpath : old_val->xpath, op);
         if_name = sr_xpath_key_value(new_val ? new_val->xpath : old_val->xpath, "interface", "name", &xpath_ctx);
+
+        std::shared_ptr<interface> intf;
+        intf = interface::find(if_name);
+        if (nullptr == intf) {
+            SRP_LOG_ERR_MSG("Interface does not exist");
+            return SR_ERR_INVAL_ARG;
+        }
+
         switch (op) {
             case SR_OP_CREATED:
             case SR_OP_MODIFIED:
-                op_rc = interface_enable(if_name, new_val->data.bool_val);
+                if (new_val->data.bool_val) {
+                    intf->set(interface::admin_state_t::UP);
+                } else {
+                    intf->set(interface::admin_state_t::DOWN);
+                }
                 break;
             case SR_OP_DELETED:
-                op_rc = interface_enable(if_name, false /* !enable */);
+                intf->set(interface::admin_state_t::DOWN);
                 break;
             default:
                 break;
@@ -75,59 +98,75 @@ ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath,
         }
         sr_free_val(old_val);
         sr_free_val(new_val);
+
+        vom_rc = OM::write(MODULE_NAME, *intf);
+        if (rc_t::OK != vom_rc) {
+            SRP_LOG_ERR_MSG("Error write data to vpp");
+        }
     }
     sr_free_change_iter(iter);
 
     return op_rc;
 }
 
-/**
- * @brief Modify existing IPv4/IPv6 config on an interface.
- */
 static int
-interface_ipv46_config_modify(const char *if_name, sr_val_t *old_val,
-                              sr_val_t *new_val, bool is_ipv6)
+ipv46_config_add_remove(const std::string &if_name,
+                        const std::string &addr, uint8_t prefix,
+                        bool add)
 {
-    sr_xpath_ctx_t xpath_ctx = { 0, };
-    char *addr = NULL;
-    uint8_t prefix = 0;
-    int rc = SR_ERR_OK;
+    l3_binding *l3;
+    rc_t rc = rc_t::OK;
 
-    SRP_LOG_DBG("Updating IP config on interface '%s'.", if_name);
-
-    /* get old config to be deleted */
-    if (SR_UINT8_T == old_val->type) {
-        prefix = old_val->data.uint8_val;
-    } else if (SR_STRING_T == old_val->type) {
-        prefix = netmask_to_prefix(old_val->data.string_val);
-    } else {
+    std::shared_ptr<interface> intf = interface::find(if_name);
+    if (nullptr == intf) {
+        SRP_LOG_ERR_MSG("Interfaces does not exist");
         return SR_ERR_INVAL_ARG;
     }
-    addr = sr_xpath_key_value((char*)old_val->xpath, "address", "ip", &xpath_ctx);
-    sr_xpath_recover(&xpath_ctx);
 
-    /* delete old IP config */
-    rc = ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, false /* remove */);
-    if (SR_ERR_OK != rc) {
-        SRP_LOG_ERR("Unable to remove old IP address config, rc=%d", rc);
-        return rc;
+    try {
+        route::prefix_t pfx(addr, prefix);
+        l3 = new l3_binding(*intf, pfx);
+        HW::item<handle_t> hw_ifh(2, rc_t::OK);
+        HW::item<bool> hw_l3_bind(true, rc_t::OK);
+        if (add) {
+            l3_binding_cmds::bind_cmd(hw_l3_bind, hw_ifh.data(), pfx);
+        } else {
+            l3_binding_cmds::unbind_cmd(hw_l3_bind, hw_ifh.data(), pfx);
+        }
+    } catch (std::exception &exc) {  //catch boost exception from prefix_t
+        SRP_LOG_ERR("Error: %s", exc.what());
+        return SR_ERR_OPERATION_FAILED;
     }
 
-    /* update the config with the new value */
-    if (sr_xpath_node_name_eq(new_val->xpath, "prefix-length")) {
-        prefix = new_val->data.uint8_val;
-    } else if (sr_xpath_node_name_eq(new_val->xpath, "netmask")) {
-        prefix = netmask_to_prefix(new_val->data.string_val);
+    rc = OM::write(MODULE_NAME, *l3);
+    if (rc_t::OK != rc) {
+        SRP_LOG_ERR_MSG("Error write data to vpp");
+        return SR_ERR_OPERATION_FAILED;
     }
 
-    /* set new IP config */
-    rc = ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, true /* add */);
-    if (SR_ERR_OK != rc) {
-        SRP_LOG_ERR("Unable to remove old IP address config, rc=%d", rc);
-        return rc;
+    return SR_ERR_OK;
+}
+
+static void
+parse_interface_ipv46_address(sr_val_t *val, std::string &addr,
+                              uint8_t &prefix)
+{
+    if (nullptr == val) {
+        throw std::runtime_error("Null pointer");
     }
 
-    return rc;
+    if (SR_LIST_T == val->type) {
+        /* create on list item - reset state vars */
+        addr.clear();
+    } else {
+        if (sr_xpath_node_name_eq(val->xpath, "ip")) {
+            addr = val->data.string_val;
+        } else if (sr_xpath_node_name_eq(val->xpath, "prefix-length")) {
+            prefix = val->data.uint8_val;
+        } else if (sr_xpath_node_name_eq(val->xpath, "netmask")) {
+            prefix = netmask_to_prefix(val->data.string_val);
+        }
+    }
 }
 
 /**
@@ -142,16 +181,18 @@ ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session,
                                        void *private_ctx)
 {
     UNUSED(private_ctx);
-    sr_change_iter_t *iter = NULL;
+    sr_change_iter_t *iter = nullptr;
     sr_change_oper_t op = SR_OP_CREATED;
-    sr_val_t *old_val = NULL;
-    sr_val_t *new_val = NULL;
+    sr_val_t *old_val = nullptr;
+    sr_val_t *new_val = nullptr;
     sr_xpath_ctx_t xpath_ctx = { 0, };
-    bool is_ipv6 = false, has_addr = false, has_prefix = false;
-    char addr[VPP_IP6_ADDRESS_STRING_LEN] = {0};
-    uint8_t prefix = 0;
-    char *node_name = NULL, *if_name = NULL;
+    std::string new_addr, old_addr;
+    std::string if_name;
+    uint8_t new_prefix = 0;
+    uint8_t old_prefix = 0;
     int rc = SR_ERR_OK, op_rc = SR_ERR_OK;
+    bool create = false;
+    bool del = false;
 
     SRP_LOG_INF("In %s", __FUNCTION__);
 
@@ -161,11 +202,6 @@ ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session,
     }
     SRP_LOG_DBG("'%s' modified, event=%d", xpath, event);
 
-    /* check whether we are handling ipv4 or ipv6 config */
-    node_name = sr_xpath_node_idx((char*)xpath, 2, &xpath_ctx);
-    if (NULL != node_name && 0 == strcmp(node_name, "ipv6")) {
-        is_ipv6 = true;
-    }
     sr_xpath_recover(&xpath_ctx);
 
     /* get changes iterator */
@@ -178,64 +214,47 @@ ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session,
 
     foreach_change(session, iter, op, old_val, new_val) {
 
-        SRP_LOG_DBG("A change detected in '%s', op=%d", new_val ? new_val->xpath : old_val->xpath, op);
-        if_name = strdup(sr_xpath_key_value(new_val ? new_val->xpath : old_val->xpath, "interface", "name", &xpath_ctx));
+        SRP_LOG_DBG("A change detected in '%s', op=%d",
+                    new_val ? new_val->xpath : old_val->xpath, op);
+        if_name = sr_xpath_key_value(new_val ? new_val->xpath : old_val->xpath,
+                                     "interface", "name", &xpath_ctx);
         sr_xpath_recover(&xpath_ctx);
 
-        switch (op) {
-            case SR_OP_CREATED:
-                if (SR_LIST_T == new_val->type) {
-                    /* create on list item - reset state vars */
-                    has_addr = has_prefix = false;
-                } else {
-                    if (sr_xpath_node_name_eq(new_val->xpath, "ip")) {
-                        strncpy(addr, new_val->data.string_val, strlen(new_val->data.string_val));
-                        has_addr = true;
-                    } else if (sr_xpath_node_name_eq(new_val->xpath, "prefix-length")) {
-                        prefix = new_val->data.uint8_val;
-                        has_prefix = true;
-                    } else if (sr_xpath_node_name_eq(new_val->xpath, "netmask")) {
-                        prefix = netmask_to_prefix(new_val->data.string_val);
-                        has_prefix = true;
-                    }
-                    if (has_addr && has_prefix) {
-                        op_rc = ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, true /* add */);
-                    }
-                }
-                break;
-            case SR_OP_MODIFIED:
-                //TODO Why is it using old_val and new_val?
-                op_rc = interface_ipv46_config_modify(if_name, old_val, new_val, is_ipv6);
-                break;
-            case SR_OP_DELETED:
-                if (SR_LIST_T == old_val->type) {
-                    /* delete on list item - reset state vars */
-                    has_addr = has_prefix = false;
-                } else {
-                    if (sr_xpath_node_name_eq(old_val->xpath, "ip")) {
-                        strncpy(addr, old_val->data.string_val, strlen(old_val->data.string_val));
-                        has_addr = true;
-                    } else if (sr_xpath_node_name_eq(old_val->xpath, "prefix-length")) {
-                        prefix = old_val->data.uint8_val;
-                        has_prefix = true;
-                    } else if (sr_xpath_node_name_eq(old_val->xpath, "netmask")) {
-                        prefix = netmask_to_prefix(old_val->data.string_val);
-                        has_prefix = true;
-                    }
-                    if (has_addr && has_prefix) {
-                        op_rc = ipv46_config_add_remove(if_name, addr, prefix, is_ipv6, false /* !add */);
-                    }
-                }
-                break;
-            default:
-                break;
+        try {
+            switch (op) {
+                case SR_OP_CREATED:
+                    create = true;
+                    parse_interface_ipv46_address(new_val, new_addr, new_prefix);
+                    break;
+                case SR_OP_MODIFIED:
+                    create = true;
+                    del = true;
+                    parse_interface_ipv46_address(old_val, old_addr, old_prefix);
+                    parse_interface_ipv46_address(new_val, new_addr, new_prefix);
+                    break;
+                case SR_OP_DELETED:
+                    del = true;
+                    parse_interface_ipv46_address(old_val, old_addr, old_prefix);
+                    break;
+                default:
+                    break;
+            }
+        } catch (std::exception &exc) {
+            SRP_LOG_ERR("Error: %s", exc.what());
         }
-        if (SR_ERR_INVAL_ARG == op_rc) {
-            sr_set_error(session, "Invalid interface name.", new_val ? new_val->xpath : old_val->xpath);
-        }
-        free(if_name);
         sr_free_val(old_val);
         sr_free_val(new_val);
+
+        if (del && !old_addr.empty()) {
+            op_rc = ipv46_config_add_remove(if_name, old_addr, old_prefix,
+                                            false /* del */);
+        }
+
+        if (create && !new_addr.empty()) {
+            op_rc = ipv46_config_add_remove(if_name, new_addr, new_prefix,
+                                            true /* add */);
+        }
+
     }
     sr_free_change_iter(iter);
 
@@ -267,10 +286,11 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values,
 {
     UNUSED(request_id); UNUSED(original_xpath); UNUSED(private_ctx);
     struct elt* stack;
-    sw_interface_dump_t *dump;
-    sr_val_t *val = NULL;
+    sr_val_t *val = nullptr;
     int vc = 5; //number of answer per interfaces
     int cnt = 0; //value counter
+    int interface_num = 0;
+    std::ostringstream os;
     int rc = SR_ERR_OK;
 
     SRP_LOG_INF("In %s", __FUNCTION__);
@@ -278,53 +298,58 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values,
     if (!sr_xpath_node_name_eq(xpath, "interface"))
         goto nothing_todo; //no interface field specified
 
-    /* dump interfaces */
-    stack = interface_dump_all();
-    if (!stack)
-        goto nothing_todo; //no element returned
+    //TODO: Not effective
+    for (auto inter = interface::cbegin(); inter != interface::cend(); inter++) {
+        interface_num++;
+    }
 
     /* allocate array of values to be returned */
-    SRP_LOG_DBG("number of interfaces: %d", stack->id+1);
-    rc = sr_new_values((stack->id + 1)* vc, &val);
+    SRP_LOG_DBG("number of interfaces: %d",  interface_num + 1);
+    rc = sr_new_values((interface_num + 1)* vc, &val);
     if (0 != rc)
         goto nothing_todo;
 
-    foreach_stack_elt(stack) {
-        dump = (sw_interface_dump_t *) data;
+    for (auto inter = interface::cbegin(); inter != interface::cend(); inter++) {
+        std::shared_ptr<interface> interface = inter->second.lock();
+        const char *if_name = interface->name().c_str();
 
-        SRP_LOG_DBG("State of interface %s", dump->interface_name);
+        SRP_LOG_DBG("State of interface %s", if_name);
         //TODO need support for type propvirtual
-        sr_val_build_xpath(&val[cnt], "%s[name='%s']/type", xpath, dump->interface_name);
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/type", xpath,
+                           interface->name().c_str());
         sr_val_set_str_data(&val[cnt], SR_IDENTITYREF_T, "iana-if-type:ethernetCsmacd");
         cnt++;
 
+        interface->dump(os);
+
+        const std::string token("oper-state:");
+        std::string tmp = os.str();
+        std::string state = tmp.substr(tmp.find(token));
+        state = state.substr(token.length(), state.find("]") - token.length());
+
         //Be careful, it needs if-mib feature to work !
-        sr_val_build_xpath(&val[cnt], "%s[name='%s']/admin-status", xpath, dump->interface_name);
-        sr_val_set_str_data(&val[cnt], SR_ENUM_T, dump->link_up_down ? "up" : "down");
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/admin-status", xpath,
+                           if_name);
+        sr_val_set_str_data(&val[cnt], SR_ENUM_T, state.c_str());
         cnt++;
 
-        sr_val_build_xpath(&val[cnt], "%s[name='%s']/oper-status", xpath, dump->interface_name);
-        sr_val_set_str_data(&val[cnt], SR_ENUM_T, dump->link_up_down ? "up" : "down");
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/oper-status", xpath,
+                           if_name);
+        sr_val_set_str_data(&val[cnt], SR_ENUM_T, state.c_str());
         cnt++;
 
-        sr_val_build_xpath(&val[cnt], "%s[name='%s']/phys-address", xpath, dump->interface_name);
-        if (dump->l2_address_length > 0) {
-            sr_val_build_str_data(&val[cnt], SR_STRING_T,
-                                  "%02x:%02x:%02x:%02x:%02x:%02x",
-                                  dump->l2_address[0], dump->l2_address[1],
-                                  dump->l2_address[2], dump->l2_address[3],
-                                  dump->l2_address[4], dump->l2_address[5]);
-        } else {
-            sr_val_build_str_data(&val[cnt], SR_STRING_T, "%02x:%02x:%02x:%02x:%02x:%02x", 0,0,0,0,0,0);
-        }
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/phys-address", xpath,
+                           if_name);
+        auto l2_address = interface->l2_address();
+        sr_val_build_str_data(&val[cnt], SR_STRING_T, "%s",
+                              l2_address.to_string().c_str());
         cnt++;
 
-        sr_val_build_xpath(&val[cnt], "%s[name='%s']/speed", xpath, dump->interface_name);
+        sr_val_build_xpath(&val[cnt], "%s[name='%s']/speed", xpath, if_name);
         val[cnt].type = SR_UINT64_T;
-        val[cnt].data.uint64_val = dump->link_speed;
+        //FIXME: VOM don't support print MTU??? Must find
+        val[cnt].data.uint64_val = 9000;
         cnt++;
-
-        free(dump);
     }
 
     *values = val;
@@ -333,7 +358,7 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values,
     return SR_ERR_OK;
 
 nothing_todo:
-    *values = NULL;
+    *values = nullptr;
     *values_cnt = 0;
     return rc;
 }
@@ -346,31 +371,31 @@ ietf_interface_init(sc_plugin_main_t *pm)
     SRP_LOG_DBG_MSG("Initializing ietf-interface plugin.");
 
     rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface",
-            ietf_interface_change_cb, NULL, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+            ietf_interface_change_cb, nullptr, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface/enabled",
-            ietf_interface_enable_disable_cb, NULL, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+            ietf_interface_enable_disable_cb, nullptr, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address",
-            ietf_interface_ipv46_address_change_cb, NULL, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+            ietf_interface_ipv46_address_change_cb, nullptr, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address",
-            ietf_interface_ipv46_address_change_cb, NULL, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+            ietf_interface_ipv46_address_change_cb, nullptr, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
 
     rc = sr_dp_get_items_subscribe(pm->session, "/ietf-interfaces:interfaces-state",
-            ietf_interface_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+            ietf_interface_state_cb, nullptr, SR_SUBSCR_CTX_REUSE, &pm->subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }

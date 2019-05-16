@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 PANTHEON.tech.
+ * Copyright (c) 2019 Cisco and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +18,17 @@
 #ifndef __SYS_UTIL_H__
 #define __SYS_UTIL_H__
 
-#include <sysrepo.h>
-#include <sysrepo/xpath.h>
-#include <sysrepo/plugins.h>
+//TODO: Add to only one header file
+extern "C" {
+    #include <sysrepo.h>
+    #include <sysrepo/xpath.h>
+    #include <sysrepo/plugins.h>
+}
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include <string.h>
-
-#include <scvpp/comm.h>
 
 /* BEGIN sysrepo utils */
 
@@ -36,6 +38,51 @@
 
 #define XPATH_SIZE 2000
 #define NOT_AVAL "NOT AVAILABLE"
+
+#define VPP_IP4_HOST_PREFIX_LEN 32
+#define VPP_INTFC_NAME_LEN 64           /* Interface name max length */
+#define VPP_IP4_ADDRESS_LEN 4           /* IPv4 length in VPP format */
+#define VPP_IP6_ADDRESS_LEN 16          /* IPv6 length in VPP format */
+#define VPP_MAC_ADDRESS_LEN 8           /* MAC length in VPP format  */
+/* IPv4 and IPv6 length in string format */
+#define VPP_IP4_ADDRESS_STRING_LEN INET_ADDRSTRLEN //16, include '\0'
+#define VPP_IP6_ADDRESS_STRING_LEN INET6_ADDRSTRLEN //46, include '\0'
+#define VPP_IP4_PREFIX_STRING_LEN \
+    INET_ADDRSTRLEN + sizeof('/') + 2 // include '\0'
+#define VPP_IP6_PREFIX_STRING_LEN \
+    INET6_ADDRSTRLEN + sizeof('/') + 3 // include '\0'
+
+/**********************************MACROS**********************************/
+#define ARG_CHECK(retval, arg) \
+    do \
+    { \
+        if (NULL == (arg)) \
+        { \
+            return (retval); \
+        } \
+    } \
+    while (0)
+
+#define ARG_CHECK2(retval, arg1, arg2) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2)
+
+#define ARG_CHECK3(retval, arg1, arg2, arg3) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2); \
+    ARG_CHECK(retval, arg3)
+
+#define ARG_CHECK4(retval, arg1, arg2, arg3, arg4) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2); \
+    ARG_CHECK(retval, arg3); \
+    ARG_CHECK(retval, arg4)
+
+/* Suppress compiler warning about unused variable.
+ * This must be used only for callback function else suppress your unused
+ * parameter in function prototype. */
+#define UNUSED(x) (void)x
+
 
 static inline int
 get_xpath_key(char *dst, char *xpath, char *node, char *key, int length,
@@ -68,7 +115,7 @@ typedef struct
 static inline int ip_prefix_split(const char* ip_prefix)
 {
     //find the slash
-    char* slash = strchr(ip_prefix, '/');
+    char* slash = (char *) strchr(ip_prefix, '/');
     if (NULL == slash)
         return -1;
 
@@ -99,7 +146,7 @@ prefix2ip4(char *dst, const char *src, uint8_t *prefix_length)
     if (!src || !dst)
         return -1;
 
-    char *p = strchr(src, '/');
+    char *p = (char *) strchr(src, '/');
     if (!p)
         return -1; // '/' not found
 
@@ -129,7 +176,7 @@ prefix2ip6(char *dst, const char *src, uint8_t *prefix_length)
     if (!src || !dst)
         return -1;
 
-    char *p = strchr(src, '/');
+    char *p = (char *) strchr(src, '/');
     if (!p)
         return -1; // '/' not found
 

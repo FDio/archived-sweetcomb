@@ -98,6 +98,15 @@ else (VPP_LIBRARIES AND VPP_INCLUDE_DIRS)
       ${CMAKE_INSTALL_PREFIX}/include
   )
 
+  find_path(VOM_INCLUDE_DIR
+    NAMES
+      vom/om.hpp
+    PATHS
+      ${VPP_INCLUDE_PATH}
+      ${CMAKE_INCLUDE_PATH}
+      ${CMAKE_INSTALL_PREFIX}/include
+  )
+
   find_library(VLIBMEMORYCLIENT_LIBRARY
     NAMES
       vlibmemoryclient
@@ -158,6 +167,16 @@ else (VPP_LIBRARIES AND VPP_INCLUDE_DIRS)
       ${CMAKE_INSTALL_PREFIX}/lib
   )
 
+   find_library(VOM_LIBRARY
+    NAMES
+      vom
+      libvom
+    PATHS
+      ${VPP_LIBRARY_PATH}
+      ${CMAKE_LIBRARY_PATH}
+      ${CMAKE_INSTALL_PREFIX}/lib
+  )
+
   if (VPP_INCLUDE_DIR AND VPP_LIBRARY)
     set(VPP_FOUND TRUE)
   else (VPP_INCLUDE_DIR AND VPP_LIBRARY)
@@ -171,6 +190,7 @@ else (VPP_LIBRARIES AND VPP_INCLUDE_DIRS)
     ${VPP_MSG_INCLUDE_DIR}
     ${VPP_ALL_INCLUDE_DIR}
     ${VAPI_INCLUDE_DIR}
+    ${VOM_INCLUDE_DIR}
   )
 
   set(VPP_LIBRARIES
@@ -180,6 +200,7 @@ else (VPP_LIBRARIES AND VPP_INCLUDE_DIRS)
     ${VLIB_LIBRARY}
     ${VATPLUGIN_LIBRARY}
     ${VAPI_LIBRARY}
+    ${VOM_LIBRARY}
   )
 
   # show the VPP_INCLUDE_DIRS and VPP_LIBRARIES variables only in the advanced view
