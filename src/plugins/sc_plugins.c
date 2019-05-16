@@ -18,6 +18,8 @@
 #include "sc_plugins.h"
 
 #include <dirent.h>
+#include <string.h>
+#include <errno.h>
 
 #include <vom/hw.hpp>
 #include <vom/om.hpp>
@@ -28,50 +30,75 @@ sc_plugin_main_t sc_plugin_main;
 
 using namespace VOM;
 
+#define _DIRENT_NAME 256
+#define CMDLINE_MAX _DIRENT_NAME + 15
+#define VPP_FULL_PATH "/usr/bin/vpp"
+
 sc_plugin_main_t *sc_get_plugin_main()
 {
     return &sc_plugin_main;
 }
 
-/* get vpp pid in system */
+/**
+ * @brief get one pid of any running vpp process.
+ * @return Return vpp pid or negative value if error.
+ */
 int get_vpp_pid()
 {
     DIR *dir;
     struct dirent *ptr;
     FILE *fp;
-    char filepath[50];
-    char filetext[20];
+    char filepath[CMDLINE_MAX];
+    char filetext[strlen(VPP_FULL_PATH)];
+    char *first = NULL;
+    size_t cnt;
 
     dir = opendir("/proc");
-    int vpp_pid = 0;
+    if (dir == NULL)
+        return -errno;
+
     /* read vpp pid file in proc, return pid of vpp */
-    if (NULL != dir)
+    while (NULL != (ptr = readdir(dir)))
     {
-        while (NULL != (ptr =readdir(dir)))
-        {
-            if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
-                continue;
+        if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
+            continue;
 
-            if (DT_DIR != ptr->d_type)
-                continue;
+        if (DT_DIR != ptr->d_type)
+            continue;
 
-            sprintf(filepath, "/proc/%s/cmdline",ptr->d_name);
-            fp = fopen(filepath, "r");
+        /* Open cmdline of PID */
+        snprintf(filepath, CMDLINE_MAX, "/proc/%s/cmdline", ptr->d_name);
+        fp = fopen(filepath, "r");
+        if (fp == NULL)
+            continue;
 
-            if (NULL != fp)
-            {
-                fread(filetext, 1, 13, fp);
-                filetext[12] = '\0';
+        /* Write '/0' char in filetext array to prevent stack reading */
+        bzero(filetext, strlen(VPP_FULL_PATH));
 
-                if (filetext == strstr(filetext, "/usr/bin/vpp"))
-                    vpp_pid = atoi(ptr->d_name);
+        /* Read the string written in cmdline file */
+        cnt = fread(filetext, sizeof(char), sizeof(VPP_FULL_PATH), fp);
+        if (cnt == 0)
+            continue;
+        filetext[cnt] = '\0';
 
-                fclose(fp);
-            }
+        /* retrieve string before first space */
+        first = strtok(filetext, " ");
+        if (first == NULL) //unmet space delimiter
+            continue;
+
+        /* One VPP process has been found */
+        if (!strcmp(first, "vpp") || !strcmp(first, VPP_FULL_PATH)) {
+            fclose(fp);
+            closedir(dir);
+            return atoi(ptr->d_name);
         }
-        closedir(dir);
+
+        fclose(fp);
     }
-    return vpp_pid;
+
+    closedir(dir);
+
+    return -ESRCH;
 }
 
 
@@ -102,6 +129,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
     *private_ctx = sc_plugin_main.subscription;
     /* get the vpp pid sweetcomb connected, we assumed that only one vpp is run in system */
     vpp_pid_start = get_vpp_pid();
+    if (0 > vpp_pid_start)
+    {
+        return SR_ERR_DISCONNECT;
+    }
+
     return SR_ERR_OK;
 }
 
@@ -124,24 +156,20 @@ int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)
    /* health_check will run every 10 seconds in loop*/
    int vpp_pid_now = get_vpp_pid();
 
-   //TODO: Test what do
-//    HW::read_stats();
-
-   if(vpp_pid_now == vpp_pid_start)
-       {
-       return SR_ERR_OK;
-       }
-   else
+   if(vpp_pid_now != vpp_pid_start)
    {
-       SRP_LOG_DBG_MSG("Try connect to VPP");
+       SRP_LOG_DBG_MSG("vpp is down.\ntry connect to vpp.");
        HW::disconnect();
        while (HW::connect() != true)
        {
-           SRP_LOG_DBG_MSG("Try connect to VPP");
+           SRP_LOG_DBG_MSG("try connect to vpp.");
        };
 
-       SRP_LOG_DBG_MSG("Connect to VPP");
+       SRP_LOG_DBG_MSG("connect to vpp");
        OM::replay();
-       return SR_ERR_OK;
+
+       vpp_pid_start = get_vpp_pid();
    }
+
+   return SR_ERR_OK;
 }
