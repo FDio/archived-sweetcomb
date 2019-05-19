@@ -21,8 +21,7 @@
 #include <scvpp/interface.h>
 #include <scvpp/ip.h>
 
-#include "../sc_model.h"
-#include "../sys_util.h"
+#include <sc_plugins.h>
 
 // XPATH: /openconfig-interfaces:interfaces/interface[name='%s']/config/
 static int openconfig_interfaces_interfaces_interface_config_cb(
@@ -590,52 +589,58 @@ static int openconfig_interfaces_interfaces_interface_subinterfaces_subinterface
     return SR_ERR_OK;
 }
 
-const xpath_t oc_interfaces_xpaths[OC_INTERFACES_SIZE] = {
-    {
-        .xpath = "/openconfig-interfaces:interfaces/interface/config",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = openconfig_interfaces_interfaces_interface_config_cb,
-        .private_ctx = NULL,
-        .priority = 98,
-        //.opts = SR_SUBSCR_DEFAULT
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-interfaces:interfaces/interface/state",
-        .method = GETITEM,
-        .datastore = SR_DS_RUNNING,
-        .cb.gcb = openconfig_interfaces_interfaces_interface_state_cb,
-        .private_ctx = NULL,
-        .priority = 98,
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/state",
-        .method = GETITEM,
-        .datastore = SR_DS_RUNNING,
-        .cb.gcb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_cb,
-        .private_ctx = NULL,
-        .priority = 99,
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address/openconfig-if-ip:config",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_config_cb,
-        .private_ctx = NULL,
-        .priority = 100,
-        //.opts = SR_SUBSCR_DEFAULT
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address/openconfig-if-ip:state",
-        .method = GETITEM,
-        .datastore = SR_DS_RUNNING,
-        .cb.gcb = openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_cb,
-        .private_ctx = NULL,
-        .priority = 100,
-        .opts = SR_SUBSCR_CTX_REUSE
+int
+openconfig_interface_init(sc_plugin_main_t *pm)
+{
+    int rc = SR_ERR_OK;
+    SRP_LOG_DBG_MSG("Initializing openconfig-interfaces plugin.");
+
+    rc = sr_subtree_change_subscribe(pm->session, "/openconfig-interfaces:interfaces/interface/config",
+            openconfig_interfaces_interfaces_interface_config_cb, NULL, 98, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
     }
-};
+
+    rc = sr_dp_get_items_subscribe(pm->session, "/openconfig-interfaces:interfaces/interface/state",
+            openconfig_interfaces_interfaces_interface_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_dp_get_items_subscribe(pm->session, "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/state",
+            openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_subtree_change_subscribe(pm->session,
+            "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address/openconfig-if-ip:config",
+            openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_config_cb,
+            NULL, 100, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_dp_get_items_subscribe(pm->session,
+            "/openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv4/openconfig-if-ip:addresses/openconfig-if-ip:address/openconfig-if-ip:state",
+            openconfig_interfaces_interfaces_interface_subinterfaces_subinterface_oc_ip_ipv4_oc_ip_addresses_oc_ip_address_oc_ip_state_cb,
+            NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    SRP_LOG_DBG_MSG("openconfig-interfaces plugin initialized successfully.");
+    return SR_ERR_OK;
+
+error:
+    SRP_LOG_ERR("Error by initialization of openconfig-interfaces plugin. Error : %d", rc);
+    return rc;
+}
+
+void
+openconfig_interface_exit(__attribute__((unused)) sc_plugin_main_t *pm)
+{
+}
+
+SC_INIT_FUNCTION(openconfig_interface_init);
+SC_EXIT_FUNCTION(openconfig_interface_exit);

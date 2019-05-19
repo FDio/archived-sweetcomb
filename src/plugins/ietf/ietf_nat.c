@@ -18,7 +18,7 @@
 #include <scvpp/interface.h>
 #include <scvpp/nat.h>
 
-#include "../sc_model.h"
+#include <sc_plugins.h>
 
 #include <assert.h>
 #include <string.h>
@@ -28,8 +28,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "../sys_util.h"
 
 /**
  * @brief Wrapper struct for VAPI address range payload.
@@ -490,23 +488,36 @@ error:
     return rc;
 }
 
-const xpath_t ietf_nat_xpaths[IETF_NAT_SIZE] = {
-    {
-        .xpath = "/ietf-nat:nat/instances/instance/policy/external-ip-address-pool",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = instances_instance_policy_external_ip_address_pool_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/ietf-nat:nat/instances/instance/mapping-table/mapping-entry",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = instances_instance_mapping_table_mapping_entry_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-};
+int
+ietf_nat_init(sc_plugin_main_t *pm)
+{
+    int rc = SR_ERR_OK;
+    SRP_LOG_DBG_MSG("Initializing ietf-nat plugin.");
+
+    rc = sr_subtree_change_subscribe(pm->session, "/ietf-nat:nat/instances/instance/policy/external-ip-address-pool",
+            instances_instance_policy_external_ip_address_pool_cb, NULL, 0, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (rc != SR_ERR_OK) {
+        goto error;
+    }
+
+    rc = sr_subtree_change_subscribe(pm->session, "/ietf-nat:nat/instances/instance/mapping-table/mapping-entry",
+            instances_instance_mapping_table_mapping_entry_cb, NULL, 0, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (rc != SR_ERR_OK) {
+        goto error;
+    }
+
+    SRP_LOG_DBG_MSG("ietf-nat plugin initialized successfully.");
+    return SR_ERR_OK;
+
+error:
+    SRP_LOG_ERR("Error by initialization of ietf-nat plugin. Error : %d", rc);
+    return rc;
+}
+
+void
+ietf_nat_exit(__attribute__((unused)) sc_plugin_main_t *pm)
+{
+}
+
+SC_INIT_FUNCTION(ietf_nat_init);
+SC_EXIT_FUNCTION(ietf_nat_exit);

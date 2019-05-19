@@ -53,10 +53,13 @@ set(CMAKE_C_FLAGS_DEBUG "-Wall -Wextra -std=gnu99 -g -O0 ${RIGOROUS_C_FLAGS}")
 #NDEBUG to skip assert checks
 set(CMAKE_C_FLAGS_RELEASE "-Wall -Wextra -std=gnu99 -DNDEBUG -O2 ${RIGOROUS_C_FLAGS}")
 
+# add plugin include directories
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 # plugins sources
 set(PLUGINS_SOURCES
+    sc_init.c
     sc_plugins.c
-    sc_model.c
     ietf/ietf_interface.c
     ietf/ietf_nat.c
     openconfig/openconfig_interfaces.c

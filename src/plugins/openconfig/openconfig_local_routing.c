@@ -21,8 +21,7 @@
 #include <scvpp/interface.h>
 #include <scvpp/ip.h>
 
-#include "../sc_model.h"
-#include "../sys_util.h"
+#include <sc_plugins.h>
 
 #define HOP_INDEX_SIZE 10 //number of digit in max 32 bit integer
 
@@ -400,7 +399,7 @@ oc_next_hop_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt,
     if (strtoul(index, NULL, 0) != reply->path[0].next_hop_id) {
         SRP_LOG_ERR("next hop index is %d for prefix %s",
                      reply->path[0].next_hop_id, prefix);
-        SRP_LOG_ERR("before %s, stroul is %d", index,  strtoul(index, NULL, 0));
+        SRP_LOG_ERR("before %s, stroul is %lu", index, strtoul(index, NULL, 0));
         return SR_ERR_INVAL_ARG;
     }
 
@@ -468,7 +467,7 @@ oc_next_hop_interface_state_cb(const char *xpath, sr_val_t **values,
     if (strtoul(index, NULL, 0) != reply->path[0].next_hop_id) {
         SRP_LOG_ERR("next hop index is %d for prefix %s",
                      reply->path[0].next_hop_id, prefix);
-        SRP_LOG_ERR("before %s, stroul is %d", index,  strtoul(index, NULL, 0));
+        SRP_LOG_ERR("before %s, stroul is %lu", index, strtoul(index, NULL, 0));
         return SR_ERR_INVAL_ARG;
     }
 
@@ -489,62 +488,61 @@ oc_next_hop_interface_state_cb(const char *xpath, sr_val_t **values,
     return SR_ERR_OK;
 }
 
-const xpath_t oc_local_routing_xpaths[OC_LROUTING_SIZE] = {
-    {
-        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/config",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = oc_prefix_config_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        //.opts = SR_SUBSCR_DEFAULT
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/config",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = oc_next_hop_config_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        //.opts = SR_SUBSCR_DEFAULT
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/interface-ref/config",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = oc_next_hop_interface_config_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        //.opts = SR_SUBSCR_DEFAULT
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/state",
-        .method = GETITEM,
-        .datastore = SR_DS_RUNNING,
-        .cb.gcb = oc_prefix_state_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/state",
-        .method = GETITEM,
-        .datastore = SR_DS_RUNNING,
-        .cb.gcb = oc_next_hop_state_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-    {
-        .xpath = "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/interface-ref/state",
-        .method = GETITEM,
-        .datastore = SR_DS_RUNNING,
-        .cb.gcb = oc_next_hop_interface_state_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        .opts = SR_SUBSCR_CTX_REUSE
-    },
-};
+int
+openconfig_local_routing_init(sc_plugin_main_t *pm)
+{
+    int rc = SR_ERR_OK;
+    SRP_LOG_DBG_MSG("Initializing openconfig-local-routing plugin.");
+
+    rc = sr_subtree_change_subscribe(pm->session, "/openconfig-local-routing:local-routes/static-routes/static/config",
+            oc_prefix_config_cb, NULL, 0, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_subtree_change_subscribe(pm->session, "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/config",
+            oc_next_hop_config_cb, NULL, 0, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_subtree_change_subscribe(pm->session, "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/interface-ref/config",
+            oc_next_hop_interface_config_cb, NULL, 0, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_dp_get_items_subscribe(pm->session, "/openconfig-local-routing:local-routes/static-routes/static/state",
+            oc_prefix_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_dp_get_items_subscribe(pm->session, "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/state",
+            oc_next_hop_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_dp_get_items_subscribe(pm->session, "/openconfig-local-routing:local-routes/static-routes/static/next-hops/next-hop/interface-ref/state",
+            oc_next_hop_interface_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    SRP_LOG_DBG_MSG("openconfig-local-routing plugin initialized successfully.");
+    return SR_ERR_OK;
+
+error:
+    SRP_LOG_ERR("Error by initialization of openconfig-local-routing plugin. Error : %d", rc);
+    return rc;
+}
+
+void
+openconfig_local_routing_exit(__attribute__((unused)) sc_plugin_main_t *pm)
+{
+}
+
+SC_INIT_FUNCTION(openconfig_local_routing_init);
+SC_EXIT_FUNCTION(openconfig_local_routing_exit);
+

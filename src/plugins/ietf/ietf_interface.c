@@ -16,8 +16,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
-#include "../sc_model.h"
-#include "../sys_util.h"
+#include <sc_plugins.h>
 
 #include <scvpp/interface.h>
 #include <scvpp/ip.h>
@@ -339,51 +338,55 @@ nothing_todo:
     return rc;
 }
 
-const xpath_t ietf_interfaces_xpaths[IETF_INTERFACES_SIZE] = {
-    {
-        .xpath = "/ietf-interfaces:interfaces/interface",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = ietf_interface_change_cb,
-        .private_ctx = NULL,
-        .priority = 0,
-        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
-    },
-    {
-        .xpath = "/ietf-interfaces:interfaces/interface/enabled",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = ietf_interface_enable_disable_cb,
-        .private_ctx = NULL,
-        .priority = 100,
-        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
-    },
-    {
-        .xpath = "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = ietf_interface_ipv46_address_change_cb,
-        .private_ctx = NULL,
-        .priority = 99,
-        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
-    },
-    {
-        .xpath = "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address",
-        .method = XPATH,
-        .datastore = SR_DS_RUNNING,
-        .cb.scb = ietf_interface_ipv46_address_change_cb,
-        .private_ctx = NULL,
-        .priority = 98,
-        .opts = SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED
-    },
-    {
-        .xpath = "/ietf-interfaces:interfaces-state",
-        .method = GETITEM,
-        .datastore = SR_DS_RUNNING,
-        .cb.gcb = ietf_interface_state_cb,
-        .private_ctx = NULL,
-        .priority = 98,
-        //.opts = SR_SUBSCR_DEFAULT,
-        .opts = SR_SUBSCR_CTX_REUSE
+
+int
+ietf_interface_init(sc_plugin_main_t *pm)
+{
+    int rc = SR_ERR_OK;
+    SRP_LOG_DBG_MSG("Initializing ietf-interface plugin.");
+
+    rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface",
+            ietf_interface_change_cb, NULL, 0, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
     }
-};
+
+    rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface/enabled",
+            ietf_interface_enable_disable_cb, NULL, 100, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/address",
+            ietf_interface_ipv46_address_change_cb, NULL, 99, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_subtree_change_subscribe(pm->session, "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/address",
+            ietf_interface_ipv46_address_change_cb, NULL, 98, SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_dp_get_items_subscribe(pm->session, "/ietf-interfaces:interfaces-state",
+            ietf_interface_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    SRP_LOG_DBG_MSG("ietf-interface plugin initialized successfully.");
+    return SR_ERR_OK;
+
+error:
+    SRP_LOG_ERR("Error by initialization of ietf-interface plugin. Error : %d", rc);
+    return rc;
+}
+
+void
+ietf_interface_exit(__attribute__((unused)) sc_plugin_main_t *pm)
+{
+}
+
+SC_INIT_FUNCTION(ietf_interface_init);
+SC_EXIT_FUNCTION(ietf_interface_exit);

@@ -13,11 +13,17 @@
  * limitations under the License.
  */
 
-#include "sc_model.h"
 #include "sc_plugins.h"
+
 #include <dirent.h>
 
+sc_plugin_main_t sc_plugin_main;
 static int vpp_pid_start;
+
+sc_plugin_main_t *sc_get_plugin_main()
+{
+    return &sc_plugin_main;
+}
 
 /* get vpp pid in system */
 int get_vpp_pid()
@@ -63,8 +69,9 @@ int get_vpp_pid()
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
-    plugin_main_t plugin_main;
     int rc;
+
+    sc_plugin_main.session = session;
 
     rc = sc_connect_vpp();
     if (0 != rc) {
@@ -72,17 +79,14 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
         return SR_ERR_INTERNAL;
     }
 
-    plugin_main.session = session;
-    plugin_main.subscription = NULL;
-
-    /* Use the same sr_subscription_ctx for all models */
-    model_register(&plugin_main, ietf_interfaces_xpaths, IETF_INTERFACES_SIZE);
-    model_register(&plugin_main, ietf_nat_xpaths, IETF_NAT_SIZE);
-    model_register(&plugin_main, oc_interfaces_xpaths, OC_INTERFACES_SIZE);
-    model_register(&plugin_main, oc_local_routing_xpaths, OC_LROUTING_SIZE);
+    rc = sc_call_all_init_function(&sc_plugin_main);
+    if (rc != SR_ERR_OK) {
+        SRP_LOG_ERR("Call all init function error: %d", rc);
+        return rc;
+    }
 
     /* set subscription as our private context */
-    *private_ctx = plugin_main.subscription;
+    *private_ctx = sc_plugin_main.subscription;
     /* get the vpp pid sweetcomb connected, we assumed that only one vpp is run in system */
     vpp_pid_start = get_vpp_pid();
     return SR_ERR_OK;
@@ -90,6 +94,8 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 {
+   sc_call_all_exit_function(&sc_plugin_main);
+
     /* subscription was set as our private context */
     if (private_ctx != NULL)
         sr_unsubscribe(session, private_ctx);
