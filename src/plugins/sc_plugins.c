@@ -16,15 +16,17 @@
  */
 
 #include "sc_plugins.h"
-
+#include "sys_util.h"
 #include <dirent.h>
 #include <string.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <vom/hw.hpp>
 #include <vom/om.hpp>
 
 static int vpp_pid_start;
+bool export_backup = false;
 
 sc_plugin_main_t sc_plugin_main;
 
@@ -101,10 +103,70 @@ int get_vpp_pid()
     return -ESRCH;
 }
 
+#define RESTORECMDLINE_MAX (79 + _DIRENT_NAME + _DIRENT_NAME)
+
+static int restore_backup()
+{
+    DIR *dir;
+    struct dirent *ptr;
+    char module_name[_DIRENT_NAME] = {0};
+    int rc = 0;
+    char cmd[RESTORECMDLINE_MAX];
+    const char *pos = NULL;
+
+    dir = opendir(BACKUP_DIR_PATH);
+    if (NULL == dir)
+    {
+        if (ENOENT != errno && ENOTDIR != errno) {
+            SRP_LOG_ERR("Failed read directory: %s, errno: %u, %s",
+                        BACKUP_DIR_PATH, errno, strerror(errno));
+            return -1;
+        }
+
+        return 0;
+    }
+
+    while (NULL != (ptr = readdir(dir)))
+    {
+        if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
+        {
+            continue;
+        }
+
+        if (DT_REG != ptr->d_type)
+        {
+            continue;
+        }
+
+        pos = strstr(ptr->d_name, ".json");
+        if (!pos) {
+            continue;
+        }
+
+        strncpy(module_name, ptr->d_name, pos - ptr->d_name);
+
+        snprintf(cmd, sizeof(cmd), "/usr/bin/sysrepocfg --format=json -i "\
+        "/tmp/sweetcomb/%s --datastore=running %s &", ptr->d_name,
+        module_name);
+
+        rc = system(cmd);
+        if (0 != rc) {
+            SRP_LOG_ERR("Failed restore backup for module: %s, errno: %s",
+                        module_name, strerror(errno));
+            break;
+        }
+    }
+
+    closedir(dir);
+
+    export_backup = true;
+
+    return rc;
+}
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
-    int rc;
+    int rc = 0;
 
     sc_plugin_main.session = session;
 
@@ -134,12 +196,91 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
         return SR_ERR_DISCONNECT;
     }
 
+    rc = restore_backup();
+    if (0 != rc) {
+        SRP_LOG_DBG_MSG("Backup restore failed");
+        return SR_ERR_INIT_FAILED;
+    }
+
+    SRP_LOG_DBG_MSG("Backup successfully restore");
+
     return SR_ERR_OK;
+}
+
+static int remove_directory(const char *path)
+{
+    DIR *dir = opendir(path);
+    struct dirent *ptr;
+    size_t path_len = strlen(path);
+    char *buf;
+    size_t len;
+    int rc = 0;
+
+    if (NULL == dir)
+    {
+        if (ENOTDIR != errno) {
+            SRP_LOG_ERR("Failed read directory: %s, errno: %s",
+                        BACKUP_DIR_PATH, strerror(errno));
+            return -1;
+        }
+
+        return 0;
+    }
+
+    while (NULL != (ptr = readdir(dir)))
+    {
+        if ((0 == strcmp(ptr->d_name, ".")) ||(0 == strcmp(ptr->d_name, "..")))
+        {
+            continue;
+        }
+
+        len = path_len + strlen(ptr->d_name) + 2;
+        buf = (char *) malloc(len * sizeof(char));
+        if (NULL == buf)
+        {
+            SRP_LOG_ERR("Out off memory, errno: %s", strerror(errno));
+            return SR_ERR_NOMEM;
+        }
+
+        snprintf(buf, len, "%s/%s", path, ptr->d_name);
+
+        if (DT_DIR == ptr->d_type)
+        {
+            remove_directory(buf);
+        }
+
+        rc = remove(buf);
+        if (0 != rc)
+        {
+            SRP_LOG_ERR("failed remove file: %s, error: %s.",
+                        buf, strerror(errno));
+        }
+
+        free(buf);
+    }
+
+    closedir(dir);
+
+    rc = remove(path);
+    if (0 == rc)
+    {
+        SRP_LOG_DBG("remove directory: %s.", path);
+    }
+        else
+    {
+        SRP_LOG_ERR("failed remove directory: %s, error: %s.",
+                    path, strerror(errno));
+    }
+
+    return rc;
 }
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 {
-   sc_call_all_exit_function(&sc_plugin_main);
+    int rc = 0;
+    struct stat st = {0};
+
+    sc_call_all_exit_function(&sc_plugin_main);
 
     /* subscription was set as our private context */
     if (private_ctx != NULL)
@@ -148,6 +289,17 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 
     HW::disconnect();
     SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
+
+    if (0 != stat(BACKUP_DIR_PATH, &st)) {
+        return;
+    }
+
+    rc = remove_directory(BACKUP_DIR_PATH);
+    if (0 == rc) {
+        SRP_LOG_DBG_MSG("remove backup ok.");
+    } else {
+        SRP_LOG_ERR_MSG("failed remove backup.");
+    }
 }
 
 int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)

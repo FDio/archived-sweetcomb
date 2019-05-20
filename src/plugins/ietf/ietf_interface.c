@@ -25,6 +25,8 @@
 #include <string>
 #include <exception>
 
+#include <stdlib.h>
+
 #include "sc_plugins.h"
 
 using namespace VOM;
@@ -271,7 +273,27 @@ ietf_interface_change_cb(sr_session_ctx_t *session, const char *xpath,
 {
     UNUSED(session); UNUSED(xpath); UNUSED(event); UNUSED(private_ctx);
 
+    struct stat st = {0};
+    const char cmd[] = "/usr/bin/sysrepocfg --format=json -x "\
+    "/tmp/sweetcomb/ietf-interfaces.json --datastore=running ietf-interfaces &";
+    int rc = 0;
+
     SRP_LOG_INF("In %s", __FUNCTION__);
+
+    if (!export_backup) {
+        return SR_ERR_OK;
+    }
+
+    if (-1 == stat(BACKUP_DIR_PATH, &st)) {
+        mkdir(BACKUP_DIR_PATH, 0700);
+    }
+
+    rc = system(cmd);
+    if (0 != rc) {
+        SRP_LOG_ERR("Failed restore backup for module: ietf-interfaces, errno: %s",
+                    strerror(errno));
+    }
+    SRP_LOG_DBG_MSG("ietf-interfaces modules, backup");
 
     return SR_ERR_OK;
 }
