@@ -42,6 +42,7 @@ class Netopeer_controler:
     def spawn(self):
         self.child = pexpect.spawn(self.name)
         self.child.logfile = open('/var/log/Netopeer_controler.log', 'wb')
+        self.child.setwinsize(1,1024)
         self.pid = self.child.pid
         self.child.expect(">")
         self.child.sendline("connect\r")
@@ -58,7 +59,7 @@ class Netopeer_controler:
     def get(self, msg):
         self.child.sendline("get --filter-xpath {}\r".format(msg))
         self.child.expect("> ")
-        print(self.child.before.decode('ascii'))
+        return self.child.before.decode('ascii')
 
     def edit_config(self, msg):
         f = open("/tmp/tmp_example.xml", "w")
@@ -67,4 +68,4 @@ class Netopeer_controler:
 
         self.child.sendline("edit-config --target running --config=/tmp/tmp_example.xml\r")
         self.child.expect("> ")
-        print(self.child.before.decode('ascii'))
+        return self.child.before.decode('ascii')

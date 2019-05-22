@@ -24,6 +24,8 @@ import psutil
 import time
 
 class Topology:
+    debug = False
+
     def __init__(self):
         self.process = []
 
@@ -31,6 +33,8 @@ class Topology:
         self._kill_process()
 
     def _kill_process(self):
+        if self.debug:
+            return
         if not self.process:
             return
 
@@ -67,7 +71,11 @@ class Topology:
         print("Start sysrepo deamon.")
         #TODO: Need property close.
         err = open("/var/log/sysrepod", 'wb')
-        self.sysrepo = subprocess.Popen(["sysrepod", "-d", "-l 3"],
+        if self.debug:
+            params = "-l 4"
+        else:
+            params = "-l 3"
+        self.sysrepo = subprocess.Popen(["sysrepod", "-d", params],
                                         stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.sysrepo)
 
@@ -75,7 +83,11 @@ class Topology:
         print("Start sysrepo plugins.")
         #TODO: Need property close.
         err = open("/var/log/sysrepo-plugind", 'wb')
-        self.splugin = subprocess.Popen(["sysrepo-plugind", "-d", "-l 3"],
+        if self.debug:
+            params = "-l 4"
+        else:
+            params = "-l 3"
+        self.splugin = subprocess.Popen(["sysrepo-plugind", "-d", params],
                                         stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.splugin)
 
@@ -93,7 +105,7 @@ class Topology:
 
     def _start_vpp(self):
         print("Start VPP.")
-        self.vpp = Vpp_controler()
+        self.vpp = Vpp_controler(self.debug)
         self.vpp.spawn()
         self.process.append(self.vpp)
 
@@ -103,8 +115,9 @@ class Topology:
     def get_netopeer_cli(self):
         return self.netopeer_cli
 
-    def create_topology(self):
+    def create_topology(self, debug=False):
         #try:
+        self.debug = debug
         self._prepare_linux_enviroment()
         self._start_vpp()
         self._start_sysrepo()

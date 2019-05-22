@@ -19,11 +19,14 @@ import time
 import psutil
 
 class Vpp_controler:
-    def __init__(self):
+    debug = False
+
+    def __init__(self, debug=False):
         self.cmd = "vpp"
         self.ccmd = "vppctl"
         self.configuration = "/root/src/sweetcomb/test/conf/vpp.conf"
         self.process = None
+        self.debug = debug
 
     def __del__(self):
         #self.kill()
@@ -50,6 +53,8 @@ class Vpp_controler:
         self.process = None
 
     def terminate(self):
+        if self.debug:
+            return
         if self.process is None:
             return
 

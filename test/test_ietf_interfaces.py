@@ -17,14 +17,14 @@
 import unittest
 
 import util
-from framewrok import SweetcombTestCase
+from framework import SweetcombTestCase
 
 class TestIetfInterfaces(SweetcombTestCase):
 
     def setUp(self):
         super(TestIetfInterfaces, self).setUp()
 
-        self.create_topoly()
+        self.create_topology()
 
     def tearDown(self):
         super(TestIetfInterfaces, self).setUp()

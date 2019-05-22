@@ -27,12 +27,19 @@ class SweetcombTestCase(unittest.TestCase):
         return cls.instance
 
     @classmethod
-    def create_topoly(cls):
+    def create_topology(cls, debug=False):
 
         cls.topology = Topology()
-        cls.topology.create_topology()
+        cls.topology.create_topology(debug)
 
         cls.vpp = cls.topology.get_vpp()
         cls.netopeer_cli = cls.topology.get_netopeer_cli()
 
+    def check_response(self, resps, expected_result, checks):
+        assert resps[1] == expected_result
 
+        for key,val in checks.items():
+            for resp in resps:
+                r = str(resp).strip()
+                if r.find("<"+key+">") == 0:
+                    assert r[r.find("<"+key+">")+len("<"+key+">"):r.rfind("</"+key+">")] == val
