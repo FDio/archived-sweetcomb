@@ -51,4 +51,4 @@ if [ "$?" == 0 ]; then
         mkdir /var/log/vpp"
 fi
 
-docker exec -it ${CONTAINER} bash -c "/root/src/sweetcomb/test/run_test.py"
+docker exec -it ${CONTAINER} bash -c "cd /root/src/sweetcomb && make test-plugins"

@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2019 PANTHEON.tech.
+# Copyright (c) 2019 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,13 +19,16 @@ import subprocess
 import os
 import time
 
+
 def ping(ip):
     subprocess.run("ping -c 4 " + ip, shell=True)
+
 
 def import_yang_modules():
     print("Import YANG models to sysrepo.")
 
-    directory = '/root/src/sweetcomb/'
+    #directory = '/root/src/sweetcomb/'
+    directory = './'
     os.chdir(directory)
     subprocess.run(["make", "uninstall-models"])
     subprocess.run(["make", "install-models"])

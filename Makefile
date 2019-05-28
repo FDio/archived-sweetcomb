@@ -90,7 +90,7 @@ RPM_GNMI_DEPENDS = pugixml jsoncpp libtool pugixml-devel jsoncpp-devel ${GRPC_RP
 
 .PHONY: help install-dep install-dep-extra install-vpp install-models uninstall-models \
     install-dep-gnmi-extra build-scvpp build-plugins build-gnmi build-package docker \
-    docker-test clean distclean _clean_dl _libssh _libyang _libnetconf2 _sysrepo _netopeer2
+    docker-test test clean distclean _clean_dl _libssh _libyang _libnetconf2 _sysrepo _netopeer2
 
 help:
 	@echo "Make Targets:"
@@ -103,6 +103,7 @@ help:
 	@echo " build-scvpp            - build scvpp"
 	@echo " test-scvpp             - unit test for scvpp"
 	@echo " build-plugins          - build plugins"
+	@echo " test-plugins           - integration test for sweetcomb plugins"
 	@echo " build-gnmi             - build gNMIServer"
 	@echo " build-package          - build rpm or deb package"
 	@echo " docker                 - build sweetcomb in docker enviroment, with optional arguments :"
@@ -246,6 +247,9 @@ build-plugins:
 	cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/; \
 	make install
 	@# NEW INSTRUCTIONS TO BUILD-PLUGINS MUST BE DECLARED ON A NEW LINE WITH '@'
+
+test-plugins:
+	@test/run_test.py
 
 build-gnmi:
 	@mkdir -p $(BR)/build-gnmi/; cd $(BR)/build-gnmi/; \

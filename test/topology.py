@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2019 PANTHEON.tech.
+# Copyright (c) 2019 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +17,13 @@
 
 import os
 import subprocess
-from netopeer_controler import Netopeer_controler
 from vpp_controler import Vpp_controler
+from netconf_client import NetConfClient
 from socket import AF_INET
 from pyroute2 import IPRoute
 import psutil
 import time
+from ydk.providers import NetconfServiceProvider
 
 class Topology:
     debug = False
@@ -109,11 +111,18 @@ class Topology:
         self.vpp.spawn()
         self.process.append(self.vpp)
 
+    def _start_netconfclient(self):
+        print("Start NetconfClient")
+        self.netconf_client = NetConfClient(address="127.0.0.1",
+                                            username="root", password="0000")
+        self.process.append(self.netconf_client)
+
     def get_vpp(self):
         return self.vpp
 
     def get_netopeer_cli(self):
-        return self.netopeer_cli
+        #return self.netopeer_cli
+        return self.netconf_client
 
     def create_topology(self, debug=False):
         #try:
@@ -127,7 +136,8 @@ class Topology:
 
         #Wait for netopeer server
         time.sleep(1)
-        self._start_netopeer_cli()
+        #self._start_netopeer_cli()
+        self._start_netconfclient()
         #except:
             #self._kill_process()
 

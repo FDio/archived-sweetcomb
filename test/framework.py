@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2019 PANTHEON.tech.
+# Copyright (c) 2019 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +18,8 @@
 import unittest
 
 from topology import Topology
+import vppctl
+
 
 class SweetcombTestCase(unittest.TestCase):
 
@@ -34,11 +37,12 @@ class SweetcombTestCase(unittest.TestCase):
 
         cls.vpp = cls.topology.get_vpp()
         cls.netopeer_cli = cls.topology.get_netopeer_cli()
+        cls.vppctl = vppctl.Vppctl()
 
     def check_response(self, resps, expected_result, checks):
         assert resps[1] == expected_result
 
-        for key,val in checks.items():
+        for key, val in checks.items():
             for resp in resps:
                 r = str(resp).strip()
                 if r.find("<"+key+">") == 0:

@@ -261,9 +261,11 @@ static sr_error_t set_static_mapping(struct static_mapping_t *mapping)
     }
 
     if (!mapping->local_port_set && !mapping->external_port_set) {
-        mapping->payload.flags = NAT_IS_ADDR_ONLY;
+        //FIXME!!!!! Compile error
+//         mapping->payload.flags = NAT_IS_ADDR_ONLY;
     } else {
-        mapping->payload.flags = NAT_IS_TWICE_NAT;
+        //FIXME!!!!! Compile error
+//         mapping->payload.flags = NAT_IS_TWICE_NAT;
         if (!mapping->protocol_set) {
 
             SRP_LOG_ERR_MSG("NAT44 protocol missing.");

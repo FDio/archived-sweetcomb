@@ -1,11 +1,12 @@
 #
 # Copyright (c) 2019 PANTHEON.tech.
+# Copyright (c) 2019 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +19,11 @@ import unittest
 
 import util
 from framework import SweetcombTestCase
+from ydk.models.ietf import ietf_interfaces
+from ydk.models.ietf import iana_if_type
+from ydk.services import CRUDService
+from ydk.errors import YError
+
 
 class TestIetfInterfaces(SweetcombTestCase):
 
@@ -31,50 +37,82 @@ class TestIetfInterfaces(SweetcombTestCase):
 
         self.topology.close_topology()
 
-    def test_interface_up(self):
+    def test_interface(self):
+        name = "host-vpp1"
+        crud_service = CRUDService()
 
-        self.vpp.show_interface()
+        interface = ietf_interfaces.Interfaces.Interface()
+        interface.name = name
+        interface.type = iana_if_type.EthernetCsmacd()
+        interface.enabled = True
+        interface.ipv4 = interface.Ipv4()
+        interface.ipv4.mtu = 1500
 
-        self.netopeer_cli.get("/ietf-interfaces:*")
-        ts = '''<interfaces xmlns=\"urn:ietf:params:xml:ns:yang:ietf-interfaces\">
-  <interface>
-    <name>local0</name>
-    <enabled>true</enabled>
-  </interface>
-  <interface>
-    <name>host-vpp1</name>
-    <enabled>true</enabled>
-  </interface>
-</interfaces>'''
+        try:
+            crud_service.create(self.netopeer_cli, interface)
+        except YError as err:
+            print("Error create services: {}".format(err))
+            assert()
 
-        self.netopeer_cli.edit_config(ts)
-        self.netopeer_cli.get("/ietf-interfaces:*")
+        p = self.vppctl.show_interface(name)
+        self.assertIsNotNone(p)
 
-        self.vpp.show_interface()
+        self.assertEquals(interface.enabled, p.State)
+        #FIXME: MTU assert
+        #self.assertEquals(interface.ipv4.mtu, p.MTU)
 
-    def test_ip_addr(self):
-        self.vpp.show_address()
-        self.netopeer_cli.get("/ietf-interfaces:*")
+        interface.enabled = False
 
-        util.ping('192.168.0.1')
+        try:
+            crud_service.create(self.netopeer_cli, interface)
+        except YError as err:
+            print("Error create services: {}".format(err))
+            assert()
 
-        ts = '''<interfaces xmlns=\"urn:ietf:params:xml:ns:yang:ietf-interfaces\" xmlns:ip=\"urn:ietf:params:xml:ns:yang:ietf-ip\">
-  <interface>
-    <name>host-vpp1</name>
-    <enabled>true</enabled>
-        <ip:ipv4>
-            <ip:enabled>true</ip:enabled>
-            <ip:address>
-              <ip:ip>192.168.0.1</ip:ip>
-              <ip:prefix-length>24</ip:prefix-length>
-            </ip:address>
-        </ip:ipv4>
-  </interface>
-</interfaces>'''
+        p = self.vppctl.show_interface(name)
+        self.assertIsNotNone(p)
+        self.assertEquals(interface.enabled, p.State)
 
-        self.netopeer_cli.edit_config(ts)
-        self.netopeer_cli.get("/ietf-interfaces:*")
+    def test_ipv4(self):
+        name = "host-vpp1"
+        crud_service = CRUDService()
 
-        self.vpp.show_address()
+        interface = ietf_interfaces.Interfaces.Interface()
+        interface.name = name
+        interface.type = iana_if_type.EthernetCsmacd()
+        interface.ipv4 = interface.Ipv4()
+        addr = interface.Ipv4().Address()
+        addr.ip = "192.168.0.1"
+        addr.prefix_length = 24
+        interface.ipv4.address.append(addr)
+        addr1 = interface.Ipv4().Address()
+        addr1.ip = "142.168.0.1"
+        addr1.prefix_length = 14
+        interface.ipv4.address.append(addr1)
 
-        util.ping('192.168.0.1')
+        try:
+            crud_service.create(self.netopeer_cli, interface)
+        except YError as err:
+            print("Error create services: {}".format(err))
+            assert()
+
+        a = self.vppctl.show_address(name)
+        self.assertIsNotNone(a)
+
+        prefix = interface.ipv4.address[0].ip + "/" + \
+                                str(interface.ipv4.address[0].prefix_length)
+        self.assertIn(prefix, a.addr)
+
+        prefix = interface.ipv4.address[1].ip + "/" + \
+                                str(interface.ipv4.address[1].prefix_length)
+        self.assertIn(prefix, a.addr)
+
+        try:
+            crud_service.delete(self.netopeer_cli, interface)
+        except YError as err:
+            print("Error create services: {}".format(err))
+            assert()
+
+        a = self.vppctl.show_address(name)
+
+        self.assertIsNone(a)

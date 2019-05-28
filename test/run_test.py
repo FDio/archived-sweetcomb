@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 #  Copyright (c) 2019 PANTHEON.tech.
+#  Copyright (c) 2019 Cisco and/or its affiliates.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -19,14 +20,19 @@
 import unittest
 import util
 
-from framewrok import SweetcombTestCase
+from framework import SweetcombTestCase
 from test_ietf_interfaces import TestIetfInterfaces
+from test_oc_interfaces import TestOcInterfaces
+
 
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(TestIetfInterfaces('test_interface_up'))
-    suite.addTest(TestIetfInterfaces('test_ip_addr'))
+    suite.addTest(TestIetfInterfaces('test_ipv4'))
+    suite.addTest(TestIetfInterfaces('test_interface'))
+    suite.addTest(TestOcInterfaces('test_interface'))
+    suite.addTest(TestOcInterfaces('test_interface_ipv4'))
     return suite
+
 
 if __name__ == '__main__':
     util.import_yang_modules()

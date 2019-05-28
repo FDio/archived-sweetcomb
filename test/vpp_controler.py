@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2019 PANTHEON.tech.
+# Copyright (c) 2019 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +18,8 @@
 import subprocess
 import time
 import psutil
+import os
+
 
 class Vpp_controler:
     debug = False
@@ -24,7 +27,8 @@ class Vpp_controler:
     def __init__(self, debug=False):
         self.cmd = "vpp"
         self.ccmd = "vppctl"
-        self.configuration = "/root/src/sweetcomb/test/conf/vpp.conf"
+        self.rootPath = os.getcwd()
+        self.configuration = self.rootPath + "/vpp.conf"
         self.process = None
         self.debug = debug
 
@@ -41,7 +45,8 @@ class Vpp_controler:
 
     def spawn(self):
         self.process = subprocess.Popen([self.cmd, "-c", self.configuration],
-                                        stdout=subprocess.PIPE)
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
         time.sleep(4)
         self._default_conf_vpp()
 
@@ -64,9 +69,3 @@ class Vpp_controler:
                 proc.kill()
 
         self.process = None
-
-    def show_interface(self):
-        subprocess.run(self.ccmd + " show int", shell=True)
-
-    def show_address(self):
-        subprocess.run(self.ccmd + " show int addr", shell=True)
