@@ -249,7 +249,7 @@ build-plugins:
 	@# NEW INSTRUCTIONS TO BUILD-PLUGINS MUST BE DECLARED ON A NEW LINE WITH '@'
 
 test-plugins:
-	@test/run_test.py
+	@test/run_test.py --dir ./test/
 
 build-gnmi:
 	@mkdir -p $(BR)/build-gnmi/; cd $(BR)/build-gnmi/; \

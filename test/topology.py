@@ -25,6 +25,7 @@ import psutil
 import time
 from ydk.providers import NetconfServiceProvider
 
+
 class Topology:
     debug = False
 
@@ -67,7 +68,6 @@ class Topology:
 
         ip.addr('add', index=vpp1, address='192.168.0.2', prefixlen=24)
         ip.addr('add', index=vpp2, address='192.168.1.2', prefixlen=24)
-
 
     def _start_sysrepo(self):
         print("Start sysrepo deamon.")

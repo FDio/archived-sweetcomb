@@ -27,13 +27,11 @@ def ping(ip):
 def import_yang_modules():
     print("Import YANG models to sysrepo.")
 
-    #directory = '/root/src/sweetcomb/'
-    directory = './'
-    os.chdir(directory)
+    directory = os.getcwd()
     subprocess.run(["make", "uninstall-models"])
     subprocess.run(["make", "install-models"])
 
-    os.chdir(directory + "test/conf/")
+    os.chdir(directory + "/test/conf/")
     print("Import configuration to sysrepo datastore.")
     subprocess.run(["sysrepocfg", "--import=ietf-interfaces.xml",
                     "--datastore=startup", "--format=xml", "--leve=0",

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (c) 2019 PANTHEON.tech.
 # Copyright (c) 2019 Cisco and/or its affiliates.
@@ -18,7 +19,7 @@
 import unittest
 
 import util
-from framework import SweetcombTestCase
+from framework import SweetcombTestCase, SweetcombTestRunner
 from ydk.models.ietf import ietf_interfaces
 from ydk.models.ietf import iana_if_type
 from ydk.services import CRUDService
@@ -116,3 +117,7 @@ class TestIetfInterfaces(SweetcombTestCase):
         a = self.vppctl.show_address(name)
 
         self.assertIsNone(a)
+
+
+if __name__ == '__main__':
+    unittest.main(testRunner=SweetcombTestRunner)

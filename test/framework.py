@@ -19,6 +19,7 @@ import unittest
 
 from topology import Topology
 import vppctl
+import sys
 
 
 class SweetcombTestCase(unittest.TestCase):
@@ -39,11 +40,71 @@ class SweetcombTestCase(unittest.TestCase):
         cls.netopeer_cli = cls.topology.get_netopeer_cli()
         cls.vppctl = vppctl.Vppctl()
 
-    def check_response(self, resps, expected_result, checks):
-        assert resps[1] == expected_result
+    def runTest(self):
+        pass
 
-        for key, val in checks.items():
-            for resp in resps:
-                r = str(resp).strip()
-                if r.find("<"+key+">") == 0:
-                    assert r[r.find("<"+key+">")+len("<"+key+">"):r.rfind("</"+key+">")] == val
+
+class SweetcombTestResult(unittest.TestResult):
+
+    def __init__(self, stream=None, descriptions=None, verbosity=None,
+                 runner=None):
+        """
+        :param stream File descriptor to store where to report test results.
+            Set to the standard error stream by default.
+        :param descriptions Boolean variable to store information if to use
+            test case descriptions.
+        :param verbosity Integer variable to store required verbosity level.
+        """
+        super(SweetcombTestResult, self).__init__(stream, descriptions, verbosity)
+        self.stream = stream
+        self.descriptions = descriptions
+        self.verbosity = verbosity
+        self.result_string = None
+        self.runner = runner
+
+
+class SweetcombTestRunner(unittest.TextTestRunner):
+    """
+    A basic test runner implementation which prints results to standard error.
+    """
+
+    @property
+    def resultclass(self):
+        return SweetcombTestResult
+
+    def __init__(self, keep_alive_pipe=None, descriptions=True, verbosity=1,
+                 result_pipe=None, failfast=False, buffer=False,
+                 resultclass=None, print_summary=True, **kwargs):
+        # ignore stream setting here, use hard-coded stdout to be in sync
+        # with prints from VppTestCase methods ...
+        super(SweetcombTestRunner, self).__init__(sys.stdout, descriptions,
+                                            verbosity, failfast, buffer,
+                                            resultclass, **kwargs)
+        #KeepAliveReporter.pipe = keep_alive_pipe
+
+        self.orig_stream = self.stream
+        self.resultclass.test_framework_result_pipe = result_pipe
+
+        self.print_summary = print_summary
+
+    def _makeResult(self):
+        return self.resultclass(self.stream,
+                                self.descriptions,
+                                self.verbosity,
+                                self)
+
+    def run(self, test):
+        """
+        Run the tests
+
+        :param test:
+
+        """
+
+        result = super(SweetcombTestRunner, self).run(test)
+        if not self.print_summary:
+            self.stream = self.orig_stream
+            result.stream = self.orig_stream
+        return result
+
+

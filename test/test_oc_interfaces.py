@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (c) 2019 PANTHEON.tech.
 # Copyright (c) 2019 Cisco and/or its affiliates.
@@ -18,7 +19,7 @@
 import unittest
 
 import util
-from framework import SweetcombTestCase
+from framework import SweetcombTestCase, SweetcombTestRunner
 from ydk.models.openconfig import openconfig_interfaces
 from ydk.models.ietf import iana_if_type
 from ydk.services import CRUDService
@@ -48,8 +49,8 @@ class TestOcInterfaces(SweetcombTestCase):
 
         try:
             crud_service.create(self.netopeer_cli, interface)
-        except YError:
-            print("Error create services")
+        except YError as err:
+            print("Error create services: {}".format(err))
 
         p = self.vppctl.show_interface(name)
         self.assertIsNotNone(p)
@@ -92,3 +93,6 @@ class TestOcInterfaces(SweetcombTestCase):
             assert()
 
         a = self.vppctl.show_address(name)
+
+if __name__ == '__main__':
+    unittest.main(testRunner=SweetcombTestRunner)

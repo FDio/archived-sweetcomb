@@ -28,12 +28,11 @@ class Vpp_controler:
         self.cmd = "vpp"
         self.ccmd = "vppctl"
         self.rootPath = os.getcwd()
-        self.configuration = self.rootPath + "/vpp.conf"
+        self.configuration = self.rootPath + "/test/conf/vpp.conf"
         self.process = None
         self.debug = debug
 
     def __del__(self):
-        #self.kill()
         self.terminate()
 
     def _default_conf_vpp(self):
