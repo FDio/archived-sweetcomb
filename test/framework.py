@@ -20,6 +20,7 @@ import unittest
 from topology import Topology
 import vppctl
 import sys
+import log
 
 
 class SweetcombTestCase(unittest.TestCase):
@@ -39,6 +40,12 @@ class SweetcombTestCase(unittest.TestCase):
         cls.vpp = cls.topology.get_vpp()
         cls.netopeer_cli = cls.topology.get_netopeer_cli()
         cls.vppctl = vppctl.Vppctl()
+
+    @classmethod
+    def setUpClass(cls):
+
+        super(SweetcombTestCase, cls).setUpClass()
+        cls.logger = log.get_logger(cls.__name__)
 
     def runTest(self):
         pass

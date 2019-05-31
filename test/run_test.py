@@ -106,5 +106,6 @@ if __name__ == '__main__':
     #map(full_suite.addTests, suites)
     for suite in suites:
         full_suite.addTests(suite)
-    result = SweetcombTestRunner(print_summary=True).run(full_suite)
+    result = SweetcombTestRunner(verbosity=1,
+                                 print_summary=True).run(full_suite)
 

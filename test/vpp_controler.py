@@ -39,8 +39,12 @@ class Vpp_controler:
         if self.process is None:
             return
 
-        subprocess.run(self.ccmd + " create host name vpp1", shell=True)
-        subprocess.run(self.ccmd + " create host name vpp2", shell=True)
+        subprocess.run(self.ccmd + " create host name vpp1", shell=True,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
+        subprocess.run(self.ccmd + " create host name vpp2", shell=True,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
 
     def spawn(self):
         self.process = subprocess.Popen([self.cmd, "-c", self.configuration],

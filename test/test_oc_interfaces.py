@@ -39,6 +39,9 @@ class TestOcInterfaces(SweetcombTestCase):
         self.topology.close_topology()
 
     def test_interface(self):
+
+        self.logger.info("OC_INTERFACE_START_001")
+
         name = "host-vpp1"
         crud_service = CRUDService()
 
@@ -67,8 +70,13 @@ class TestOcInterfaces(SweetcombTestCase):
         self.assertIsNotNone(p)
         self.assertEquals(interface.config.enabled, p.State)
 
+        self.logger.info("OC_INTERFACE_FINISH_001")
+
     @unittest.skip("YDK return error when try set IP address")
     def test_interface_ipv4(self):
+
+        self.logger.info("OC_INTERFACE_START_002")
+
         name = "host-vpp1"
         crud_service = CRUDService()
 
@@ -93,6 +101,8 @@ class TestOcInterfaces(SweetcombTestCase):
             assert()
 
         a = self.vppctl.show_address(name)
+
+        self.logger.info("OC_INTERFACE_FINISH_002")
 
 if __name__ == '__main__':
     unittest.main(testRunner=SweetcombTestRunner)

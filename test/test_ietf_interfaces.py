@@ -39,6 +39,9 @@ class TestIetfInterfaces(SweetcombTestCase):
         self.topology.close_topology()
 
     def test_interface(self):
+
+        self.logger.info("IETF_INTERFACE_TEST_START_001")
+
         name = "host-vpp1"
         crud_service = CRUDService()
 
@@ -74,7 +77,12 @@ class TestIetfInterfaces(SweetcombTestCase):
         self.assertIsNotNone(p)
         self.assertEquals(interface.enabled, p.State)
 
+        self.logger.info("IETF_INTERFACE_TEST_FINISH_001")
+
     def test_ipv4(self):
+
+        self.logger.info("IETF_INTERFACE_TEST_START_002")
+
         name = "host-vpp1"
         crud_service = CRUDService()
 
@@ -117,6 +125,8 @@ class TestIetfInterfaces(SweetcombTestCase):
         a = self.vppctl.show_address(name)
 
         self.assertIsNone(a)
+
+        self.logger.info("IETF_INTERFACE_TEST_FINISH_002")
 
 
 if __name__ == '__main__':

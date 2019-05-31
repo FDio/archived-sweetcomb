@@ -70,7 +70,8 @@ class Topology:
         ip.addr('add', index=vpp2, address='192.168.1.2', prefixlen=24)
 
     def _start_sysrepo(self):
-        print("Start sysrepo deamon.")
+        #TODO: Add to log
+        #print("Start sysrepo deamon.")
         #TODO: Need property close.
         err = open("/var/log/sysrepod", 'wb')
         if self.debug:
@@ -82,7 +83,8 @@ class Topology:
         self.process.append(self.sysrepo)
 
     def _start_sysrepo_plugins(self):
-        print("Start sysrepo plugins.")
+        #TODO: Add to log
+        #print("Start sysrepo plugins.")
         #TODO: Need property close.
         err = open("/var/log/sysrepo-plugind", 'wb')
         if self.debug:
@@ -94,25 +96,27 @@ class Topology:
         self.process.append(self.splugin)
 
     def _start_netopeer_server(self):
-        print("Start netopeer server.")
+        #TODO: Add to log
+        #print("Start netopeer server.")
         self.netopeer_server = subprocess.Popen("netopeer2-server",
                                                 stdout=subprocess.PIPE)
         self.process.append(self.netopeer_server)
 
     def _start_netopeer_cli(self):
-        print("Start netopeer client.")
+        #TODO: Add to log
+        #print("Start netopeer client.")
         self.netopeer_cli = Netopeer_controler()
         self.process.append(self.netopeer_cli)
         self.netopeer_cli.spawn()
 
     def _start_vpp(self):
-        print("Start VPP.")
+        #print("Start VPP.")
         self.vpp = Vpp_controler(self.debug)
         self.vpp.spawn()
         self.process.append(self.vpp)
 
     def _start_netconfclient(self):
-        print("Start NetconfClient")
+        #print("Start NetconfClient")
         self.netconf_client = NetConfClient(address="127.0.0.1",
                                             username="root", password="0000")
         self.process.append(self.netconf_client)
@@ -121,11 +125,9 @@ class Topology:
         return self.vpp
 
     def get_netopeer_cli(self):
-        #return self.netopeer_cli
         return self.netconf_client
 
     def create_topology(self, debug=False):
-        #try:
         self.debug = debug
         self._prepare_linux_enviroment()
         self._start_vpp()
@@ -136,10 +138,7 @@ class Topology:
 
         #Wait for netopeer server
         time.sleep(1)
-        #self._start_netopeer_cli()
         self._start_netconfclient()
-        #except:
-            #self._kill_process()
 
     def close_topology(self):
         self._kill_process()
