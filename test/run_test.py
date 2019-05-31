@@ -108,4 +108,11 @@ if __name__ == '__main__':
         full_suite.addTests(suite)
     result = SweetcombTestRunner(verbosity=1,
                                  print_summary=True).run(full_suite)
+    was_successful = result.wasSuccessful()
+    #if not was_successful:
+        #for test_case_info in result.failed_test_cases_info:
+            #handle_failed_suite(test_case_info.logger,
+                                #test_case_info.tempdir,
+                                    #test_case_info.vpp_pid)
+    sys.exit(not was_successful)
 
