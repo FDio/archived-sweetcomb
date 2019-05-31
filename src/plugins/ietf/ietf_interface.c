@@ -75,7 +75,7 @@ ietf_interface_enable_disable_cb(sr_session_ctx_t *session, const char *xpath,
         std::shared_ptr<interface> intf;
         intf = interface::find(if_name);
         if (nullptr == intf) {
-            SRP_LOG_ERR_MSG("Interface does not exist");
+            SRP_LOG_ERR("Interface %s does not exist", if_name);
             return SR_ERR_INVAL_ARG;
         }
 
@@ -119,6 +119,8 @@ ipv46_config_add_remove(const std::string &if_name,
     l3_binding *l3;
     rc_t rc = rc_t::OK;
 
+    SRP_LOG_INF("Call addr: %s, %d", addr.c_str(), prefix);
+
     std::shared_ptr<interface> intf = interface::find(if_name);
     if (nullptr == intf) {
         SRP_LOG_ERR_MSG("Interfaces does not exist");
@@ -129,10 +131,12 @@ ipv46_config_add_remove(const std::string &if_name,
         route::prefix_t pfx(addr, prefix);
         l3 = new l3_binding(*intf, pfx);
         HW::item<handle_t> hw_ifh(2, rc_t::OK);
-        HW::item<bool> hw_l3_bind(true, rc_t::OK);
         if (add) {
+            HW::item<bool> hw_l3_bind(true, rc_t::OK);
             l3_binding_cmds::bind_cmd(hw_l3_bind, hw_ifh.data(), pfx);
         } else {
+            SRP_LOG_INF("Unbind addr: %s, %d", addr.c_str(), prefix);
+            HW::item<bool> hw_l3_bind(false, rc_t::OK);
             l3_binding_cmds::unbind_cmd(hw_l3_bind, hw_ifh.data(), pfx);
         }
     } catch (std::exception &exc) {  //catch boost exception from prefix_t
@@ -140,6 +144,7 @@ ipv46_config_add_remove(const std::string &if_name,
         return SR_ERR_OPERATION_FAILED;
     }
 
+    SRP_LOG_DBG_MSG("WRITE");
     rc = OM::write(MODULE_NAME, *l3);
     if (rc_t::OK != rc) {
         SRP_LOG_ERR_MSG("Error write data to vpp");
@@ -159,7 +164,8 @@ parse_interface_ipv46_address(sr_val_t *val, std::string &addr,
 
     if (SR_LIST_T == val->type) {
         /* create on list item - reset state vars */
-        addr.clear();
+//         SRP_LOG_INF("List: %s", addr.c_str());
+//         addr.clear();
     } else {
         if (sr_xpath_node_name_eq(val->xpath, "ip")) {
             addr = val->data.string_val;
@@ -246,18 +252,18 @@ ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session,
         }
         sr_free_val(old_val);
         sr_free_val(new_val);
-
-        if (del && !old_addr.empty()) {
-            op_rc = ipv46_config_add_remove(if_name, old_addr, old_prefix,
-                                            false /* del */);
-        }
-
-        if (create && !new_addr.empty()) {
-            op_rc = ipv46_config_add_remove(if_name, new_addr, new_prefix,
-                                            true /* add */);
-        }
-
     }
+
+    if (del && !old_addr.empty()) {
+        op_rc = ipv46_config_add_remove(if_name, old_addr, old_prefix,
+                                        false /* del */);
+    }
+
+    if (create && !new_addr.empty()) {
+        op_rc = ipv46_config_add_remove(if_name, new_addr, new_prefix,
+                                        true /* add */);
+    }
+
     sr_free_change_iter(iter);
 
     return op_rc;

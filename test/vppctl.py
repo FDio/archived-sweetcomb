@@ -84,7 +84,8 @@ class Vppctl:
             return interfaces
         else:
             for intf in interfaces:
-                if intf.name == name:
+                if intf.name == name or \
+                    ("host" in intf.name and name in intf.name):
                     return intf
 
         return None
@@ -99,6 +100,8 @@ class Vppctl:
             if re.match('^\s+', line) is None:
                 tmp = line.split(" ")
                 name = tmp[0]
+                if "host-" in name:
+                    name = name.replace("host-", "")
             else:
                 if name is None:
                     continue

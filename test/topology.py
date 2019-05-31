@@ -16,6 +16,7 @@
 #
 
 import os
+import sys
 import subprocess
 from vpp_controler import Vpp_controler
 from netconf_client import NetConfClient
@@ -28,9 +29,8 @@ from ydk.errors import YClientError
 
 
 class Topology:
-    debug = False
-
     def __init__(self):
+        self.debug = True
         self.process = []
 
     def __del__(self):
@@ -48,10 +48,14 @@ class Topology:
 
             process.terminate()
 
-        for proc in psutil.process_iter(attrs=['pid', 'name']):
-            name = proc.info['name']
-            if 'vpp' in name or 'sysrepo' in name or 'netopeer' in name:
-                proc.kill()
+        try:
+            for proc in psutil.process_iter(attrs=['pid', 'name']):
+                name = proc.info['name']
+                if 'vpp' in name or 'sysrepo' in name or 'netopeer' in name:
+                    #proc.kill()
+                    proc.terminate()
+        except ValueError as err:
+            print(err)
 
         self.process = []
 
@@ -86,7 +90,7 @@ class Topology:
                                         stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.sysrepo)
 
-    def _start_sysrepo_plugins(self):
+    def start_sysrepo_plugins(self):
         #TODO: Add to log
         #print("Start sysrepo plugins.")
         #TODO: Need property close.
@@ -95,6 +99,7 @@ class Topology:
             params = "-l 4"
         else:
             params = "-l 3"
+        params = "-l 4"
         self.splugin = subprocess.Popen(["sysrepo-plugind", "-d", params],
                                         stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.splugin)
@@ -114,7 +119,7 @@ class Topology:
         self.process.append(self.netopeer_cli)
         self.netopeer_cli.spawn()
 
-    def _start_vpp(self):
+    def start_vpp(self):
         #print("Start VPP.")
         self.vpp = Vpp_controler(self.debug)
         self.vpp.spawn()
@@ -138,10 +143,10 @@ class Topology:
     def create_topology(self, debug=False):
         self.debug = debug
         self._prepare_linux_enviroment()
-        self._start_vpp()
+        self.start_vpp()
         self._start_sysrepo()
         time.sleep(1)
-        self._start_sysrepo_plugins()
+        self.start_sysrepo_plugins()
         self._start_netopeer_server()
 
         #Wait for netopeer server
