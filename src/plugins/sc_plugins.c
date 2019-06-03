@@ -123,6 +123,7 @@ static int restore_backup()
             return -1;
         }
 
+        export_backup = true;
         return 0;
     }
 
