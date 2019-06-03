@@ -24,6 +24,7 @@ from pyroute2 import IPRoute
 import psutil
 import time
 from ydk.providers import NetconfServiceProvider
+from ydk.errors import YClientError
 
 
 class Topology:
@@ -42,6 +43,9 @@ class Topology:
             return
 
         for process in self.process:
+            if process is None:
+                continue
+
             process.terminate()
 
         for proc in psutil.process_iter(attrs=['pid', 'name']):
@@ -98,8 +102,9 @@ class Topology:
     def _start_netopeer_server(self):
         #TODO: Add to log
         #print("Start netopeer server.")
-        self.netopeer_server = subprocess.Popen("netopeer2-server",
-                                                stdout=subprocess.PIPE)
+        err = open("/var/log/netopeer2-server", 'wb')
+        self.netopeer_server = subprocess.Popen(["netopeer2-server", "-d"],
+                                                stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.netopeer_server)
 
     def _start_netopeer_cli(self):
@@ -117,9 +122,12 @@ class Topology:
 
     def _start_netconfclient(self):
         #print("Start NetconfClient")
-        self.netconf_client = NetConfClient(address="127.0.0.1",
-                                            username="root", password="0000")
-        self.process.append(self.netconf_client)
+        try:
+            self.netconf_client = NetConfClient(address="127.0.0.1",
+                                                username="user", password="user")
+            self.process.append(self.netconf_client)
+        except RuntimeError as err:
+            print("NetConfClient failed, {}".format(err))
 
     def get_vpp(self):
         return self.vpp

@@ -83,8 +83,6 @@ if __name__ == '__main__':
                              "(may be specified multiple times)")
     args = parser.parse_args()
 
-    util.import_yang_modules()
-
     ddir = list()
     if args.dir is None:
         ddir.append(os.getcwd())

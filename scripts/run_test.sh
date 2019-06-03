@@ -47,6 +47,10 @@ docker exec -it ${CONTAINER} bash -c "
 if [ "$?" == 0 ]; then
     echo "Run tests"
     docker exec -it ${CONTAINER} bash -c "
+        useradd user
+        echo -e \"user\nuser\" | passwd user
+    "
+    docker exec -it ${CONTAINER} bash -c "
         echo -e \"0000\n0000\" | passwd
         mkdir /var/log/vpp"
 fi
