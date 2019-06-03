@@ -204,7 +204,12 @@ _netopeer2:
 
 _test_python_dep:
 ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
-	@sudo -E apt-get $(APT_ARGS) -y --force-yes install $(DEB_TEST_DEPENDS)\
+	@sudo -E apt-get $(APT_ARGS) -y --force-yes install $(DEB_TEST_DEPENDS)
+ifeq ($(OS_VERSION_ID), 16.04)
+	# Need update libssh library, because netopeer ssh communication does not work with old library
+	@echo "deb http://archive.ubuntu.com/ubuntu/ bionic main restricted" >> /etc/apt/sources.list\
+	&&apt-get update && apt-get -y install libssh-4
+endif
 else ifeq ($(OS_ID),centos)
 #TODO:
 # compiler return me this error and I don't know hot to fix it, yet
@@ -269,7 +274,7 @@ ifeq ($(OS_ID),centos)
 endif
 endif
 
-install-test-extra: _test_python_dep _ydk
+install-test-extra: _clean_dl _libssh _test_python_dep _ydk
 	@cd ../ && rm -rf $(BR)/downloads
 
 build-scvpp:
@@ -287,7 +292,7 @@ build-plugins:
 	make install
 	@# NEW INSTRUCTIONS TO BUILD-PLUGINS MUST BE DECLARED ON A NEW LINE WITH '@'
 
-test-plugins:
+test-plugins: install-models
 	@test/run_test.py --dir ./test/
 
 build-gnmi:
