@@ -36,6 +36,16 @@ class Topology:
     def __del__(self):
         self._kill_process()
 
+    def _kill_pr(self, pname):
+        try:
+            for proc in psutil.process_iter(attrs=['pid', 'name']):
+                name = proc.info['name']
+                if pname in name:
+                    print("Terminate: {}".format(name))
+                    proc.terminate()
+        except ValueError as err:
+            print(err)
+
     def _kill_process(self):
         if self.debug:
             return
@@ -48,16 +58,24 @@ class Topology:
 
             process.terminate()
 
+        self.process = []
+
+        self._kill_pr('netopeer')
+        self._kill_pr('sysrepo-plugind')
+        time.sleep(1)
+        self._kill_pr('sysrepod')
+        self._kill_pr('vpp')
+
+        #Clean for your self
+        time.sleep(1)
         try:
             for proc in psutil.process_iter(attrs=['pid', 'name']):
                 name = proc.info['name']
                 if 'vpp' in name or 'sysrepo' in name or 'netopeer' in name:
-                    #proc.kill()
-                    proc.terminate()
+                    print("Kill: {}".format(name))
+                    proc.kill()
         except ValueError as err:
             print(err)
-
-        self.process = []
 
     def _prepare_linux_enviroment(self):
         ip = IPRoute()
@@ -100,7 +118,7 @@ class Topology:
         else:
             params = "-l 3"
         params = "-l 4"
-        self.splugin = subprocess.Popen(["sysrepo-plugind", "-d", params],
+        self.splugin = subprocess.Popen(["sysrepo-plugind", "-D", "-d", params],
                                         stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.splugin)
 
@@ -129,7 +147,7 @@ class Topology:
         #print("Start NetconfClient")
         try:
             self.netconf_client = NetConfClient(address="127.0.0.1",
-                                                username="user", password="user")
+                                                username="root", password="0000")
             self.process.append(self.netconf_client)
         except RuntimeError as err:
             print("NetConfClient failed, {}".format(err))
@@ -144,8 +162,7 @@ class Topology:
         self.debug = debug
         self._prepare_linux_enviroment()
         self.start_vpp()
-        self._start_sysrepo()
-        time.sleep(1)
+        #self._start_sysrepo()
         self.start_sysrepo_plugins()
         self._start_netopeer_server()
 

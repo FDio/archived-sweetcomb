@@ -274,9 +274,6 @@ ifeq ($(OS_ID),centos)
 endif
 endif
 
-install-test-extra: _test_python_dep _ydk
-	@cd ../ && rm -rf $(BR)/downloads
-
 install-test-extra: _clean_dl _libssh _test_python_dep _ydk
 	@cd ../ && rm -rf $(BR)/downloads
 
