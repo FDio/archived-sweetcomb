@@ -17,6 +17,8 @@
 
 #include <dirent.h>
 
+#include <vpp-api/client/stat_client.h>
+
 sc_plugin_main_t sc_plugin_main;
 static int vpp_pid_start;
 
@@ -73,9 +75,17 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
     sc_plugin_main.session = session;
 
+    /* Connect to VAPI */
     rc = sc_connect_vpp();
     if (0 != rc) {
-        SRP_LOG_ERR("vpp connect error , with return %d.", rc);
+        SRP_LOG_ERR("vpp vapi connect error , with return %d.", rc);
+        return SR_ERR_INTERNAL;
+    }
+
+    /* Connect to STAT API */
+    rc = stat_segment_connect(STAT_SEGMENT_SOCKET_FILE);
+    if (rc != 0) {
+        SRP_LOG_ERR("vpp stat connect error , with return %d.", rc);
         return SR_ERR_INTERNAL;
     }
 
@@ -94,13 +104,17 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 {
-   sc_call_all_exit_function(&sc_plugin_main);
+    sc_call_all_exit_function(&sc_plugin_main);
 
     /* subscription was set as our private context */
     if (private_ctx != NULL)
         sr_unsubscribe(session, private_ctx);
     SRP_LOG_DBG_MSG("unload plugin ok.");
 
+    /* Disconnect from STAT API */
+    stat_segment_disconnect();
+
+    /* Disconnect from VAPI */
     sc_disconnect_vpp();
     SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
 }

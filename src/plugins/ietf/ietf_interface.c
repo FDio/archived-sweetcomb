@@ -21,6 +21,8 @@
 #include <scvpp/interface.h>
 #include <scvpp/ip.h>
 
+#include <vpp-api/client/stat_client.h>
+
 /**
  * @brief Callback to be called by any config change of
  * "/ietf-interfaces:interfaces/interface/enabled" leaf.
@@ -259,6 +261,8 @@ ietf_interface_change_cb(sr_session_ctx_t *session, const char *xpath,
 
 /**
  * @brief Callback to be called by any request for state data under "/ietf-interfaces:interfaces-state/interface" path.
+ * Here we reply systematically with all interfaces, it the responsability of
+ * sysrepo apply a filter not to answer undesired interfaces.
  */
 static int
 ietf_interface_state_cb(const char *xpath, sr_val_t **values,
@@ -292,7 +296,7 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values,
     foreach_stack_elt(stack) {
         dump = (sw_interface_dump_t *) data;
 
-        SRP_LOG_DBG("State of interface %s", dump->interface_name);
+        SRP_LOG_DBG("State of interface %s, xpath %s", dump->interface_name, xpath);
         //TODO need support for type propvirtual
         sr_val_build_xpath(&val[cnt], "%s[name='%s']/type", xpath, dump->interface_name);
         sr_val_set_str_data(&val[cnt], SR_IDENTITYREF_T, "iana-if-type:ethernetCsmacd");
@@ -325,6 +329,174 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values,
         cnt++;
 
         free(dump);
+    }
+
+    *values = val;
+    *values_cnt = cnt;
+
+    return SR_ERR_OK;
+
+nothing_todo:
+    *values = NULL;
+    *values_cnt = 0;
+    return rc;
+}
+
+static inline stat_segment_data_t* fetch_stat_index(const char *path) {
+    stat_segment_data_t *r;
+    u32 *stats = NULL;
+    u8 **patterns = NULL;
+
+    patterns = stat_segment_string_vector(patterns, path);
+    if (!patterns)
+        return NULL;
+
+    do {
+        stats = stat_segment_ls(patterns);
+        if (!stats)
+            return NULL;
+
+        r = stat_segment_dump(stats);
+    } while (r == NULL); /* Memory layout has changed */
+
+    return r;
+}
+
+static inline uint64_t get_counter(stat_segment_data_t *r, int itf_idx)
+{
+    if (r == NULL) {
+        SRP_LOG_ERR_MSG("stat segment can not be NULL");
+        return 0;
+    }
+
+    if (r->type != STAT_DIR_TYPE_COUNTER_VECTOR_SIMPLE) {
+        SRP_LOG_ERR_MSG("Only simple counter");
+        return 0;
+    }
+
+    return r->simple_counter_vec[0][itf_idx];
+}
+
+static inline uint64_t get_bytes(stat_segment_data_t *r, int itf_idx)
+{
+    if (r->type != STAT_DIR_TYPE_COUNTER_VECTOR_COMBINED) {
+        SRP_LOG_ERR_MSG("Only combined counter");
+        return 0;
+    }
+
+    return r->combined_counter_vec[0][itf_idx].bytes;
+}
+
+static inline uint64_t get_packets(stat_segment_data_t *r, int itf_idx)
+{
+    if (r->type != STAT_DIR_TYPE_COUNTER_VECTOR_COMBINED) {
+        SRP_LOG_ERR_MSG("Only combined counter");
+        return 0;
+    }
+
+    return r->combined_counter_vec[0][itf_idx].packets;
+}
+
+/**
+ * @brief Callback to be called by any request for state data under
+ * "/ietf-interfaces:interfaces-state/interface/statistics" path.
+ */
+static int
+interface_statistics_cb(const char *xpath, sr_val_t **values,
+                        size_t *values_cnt, uint64_t request_id,
+                        const char *original_xpath, void *private_ctx)
+{
+    UNUSED(request_id); UNUSED(original_xpath); UNUSED(private_ctx);
+    sr_val_t *val = NULL;
+    int vc = 10;
+    int cnt = 0; //value counter
+    int rc = SR_ERR_OK;
+    sr_xpath_ctx_t state = {0};
+    char *tmp;
+    char interface_name[VPP_INTFC_NAME_LEN] = {0};
+    uint32_t itf_idx;
+    stat_segment_data_t *r;
+
+    SRP_LOG_INF("In %s", __FUNCTION__);
+
+    /* Retrieve the interface asked */
+    tmp = sr_xpath_key_value((char*) xpath, "interface", "name", &state);
+    if (!tmp) {
+        SRP_LOG_ERR_MSG("XPATH interface name not found");
+        return SR_ERR_INVAL_ARG;
+    }
+    strncpy(interface_name, tmp, VPP_INTFC_NAME_LEN);
+    sr_xpath_recover(&state);
+
+    /* allocate array of values to be returned */
+    rc = sr_new_values(vc, &val);
+    if (0 != rc)
+        goto nothing_todo;
+
+    rc = get_interface_id(interface_name, &itf_idx);
+    if (rc != 0)
+        goto nothing_todo;
+
+    SRP_LOG_DBG("name:%s index:%d", interface_name, itf_idx);
+
+    r = fetch_stat_index("/if");
+    if (!r)
+        goto nothing_todo;
+
+    for (int i = 0; i < stat_segment_vec_len(r); i++) {
+        if (strcmp(r[i].name, "/if/rx") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/in-octets", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_bytes(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/rx-unicast") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/in-unicast-pkts", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_packets(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/rx-broadcast") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/in-broadcast-pkts", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_packets(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/rx-multicast") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/in-multicast-pkts", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_packets(&r[i], itf_idx);
+            cnt++;
+        }  else if (strcmp(r[i].name, "/if/rx-error") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/in-errors", xpath, 5);
+            val[cnt].type = SR_UINT32_T;
+            //Be carefeul cast uint64 to uint32
+            val[cnt].data.uint32_val = get_counter(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/tx") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/out-octets", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_bytes(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/tx-unicast") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/out-unicast-pkts", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_packets(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/tx-broadcast") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/out-broadcast-pkts", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_packets(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/tx-multicast") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/out-multicast-pkts", xpath, 5);
+            val[cnt].type = SR_UINT64_T;
+            val[cnt].data.uint64_val = get_packets(&r[i], itf_idx);
+            cnt++;
+        } else if (strcmp(r[i].name, "/if/tx-error") == 0) {
+            sr_val_build_xpath(&val[cnt], "%s/out-errors", xpath, 5);
+            val[cnt].type = SR_UINT32_T;
+            //Be carefeul cast uint64 to uint32
+            val[cnt].data.uint32_val = get_counter(&r[i], itf_idx);
+            cnt++;
+        }
     }
 
     *values = val;
@@ -371,6 +543,12 @@ ietf_interface_init(sc_plugin_main_t *pm)
 
     rc = sr_dp_get_items_subscribe(pm->session, "/ietf-interfaces:interfaces-state",
             ietf_interface_state_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
+    if (SR_ERR_OK != rc) {
+        goto error;
+    }
+
+    rc = sr_dp_get_items_subscribe(pm->session, "/ietf-interfaces:interfaces-state/interface/statistics",
+            interface_statistics_cb, NULL, SR_SUBSCR_CTX_REUSE, &pm->subscription);
     if (SR_ERR_OK != rc) {
         goto error;
     }
