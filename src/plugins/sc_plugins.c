@@ -288,19 +288,18 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
         sr_unsubscribe(session, (sr_subscription_ctx_t*) private_ctx);
     SRP_LOG_DBG_MSG("unload plugin ok.");
 
+    if (0 == stat(BACKUP_DIR_PATH, &st)) {
+        rc = remove_directory(BACKUP_DIR_PATH);
+        if (0 == rc) {
+            SRP_LOG_DBG_MSG("remove backup ok.");
+        } else {
+            SRP_LOG_ERR_MSG("failed remove backup.");
+        }
+    }
+
     HW::disconnect();
     SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
 
-    if (0 != stat(BACKUP_DIR_PATH, &st)) {
-        return;
-    }
-
-    rc = remove_directory(BACKUP_DIR_PATH);
-    if (0 == rc) {
-        SRP_LOG_DBG_MSG("remove backup ok.");
-    } else {
-        SRP_LOG_ERR_MSG("failed remove backup.");
-    }
 }
 
 int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)
