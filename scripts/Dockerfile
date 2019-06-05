@@ -15,14 +15,26 @@ RUN make install-dep && make install-dep-extra
 RUN rm -rf /opt/dev/*
 
 #Layer1
+## Need install VOM and packagecloud don't have VOM deb
 RUN apt-get install -y \
     sudo curl \
     inetutils-ping \
-    && curl -s https://packagecloud.io/install/repositories/fdio/$vpp_version/script.deb.sh | sudo bash \
-    && apt-get -y --force-yes install vpp libvppinfra* vpp-plugin-* vpp-dev
+    git \
+    python-cffi python-ply python-pycparser \
+    && git clone --single-branch --branch stable/1904 https://gerrit.fd.io/r/vpp \
+    && cd vpp && yes | make install-dep && make pkg-deb && make vom-pkg-deb
+
+RUN cd vpp/build-root && dpkg -i vpp*.deb libvppinfra*.deb vpp-plugin-*.deb \
+    vpp-dev*.deb vom*.deb vpp-api-python*.deb
+
+RUN cp vpp/extras/vom/vom/*.hpp /usr/include/vom/
+
+RUN rm -rf /opt/dev/*
+#     && curl -s https://packagecloud.io/install/repositories/fdio/$vpp_version/script.deb.sh | sudo bash \
+#     && apt-get -y --force-yes install vpp libvppinfra* vpp-plugin-* vpp-dev
 
 #Layer2
 COPY . /root/src/sweetcomb
 WORKDIR /root/src/sweetcomb
 
-RUN make install-dep && make build-scvpp && make build-plugins
+RUN make install-dep && make build-plugins
