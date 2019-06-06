@@ -32,6 +32,10 @@ int sc_connect_vpp()
     if (g_vapi_ctx == NULL)
     {
         vapi_error_e rv = vapi_ctx_alloc(&g_vapi_ctx);
+        if (rv != VAPI_OK) {
+            g_vapi_ctx = NULL;
+            return -1;
+        }
         rv = vapi_connect(g_vapi_ctx, APP_NAME, NULL,
                           MAX_OUTSTANDING_REQUESTS, RESPONSE_QUEUE_SIZE,
                           VAPI_MODE_BLOCKING, true);

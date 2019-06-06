@@ -137,8 +137,11 @@ static inline int push(struct elt **stack, void *data, int length)
     if (!el)
         return -ENOMEM;
     el->data = malloc(length);
-    if (!el->data)
+    if (!el->data) {
+        free(el);
         return -ENOMEM;
+    }
+
 
     memcpy(el->data, data, length);
     if (*stack)
