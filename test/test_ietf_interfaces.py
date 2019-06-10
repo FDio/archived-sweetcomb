@@ -95,10 +95,10 @@ class TestIetfInterfaces(SweetcombTestCase):
         addr.ip = "192.168.0.1"
         addr.prefix_length = 24
         interface.ipv4.address.append(addr)
-        #addr1 = interface.Ipv4().Address()
-        #addr1.ip = "142.168.0.1"
-        #addr1.prefix_length = 14
-        #interface.ipv4.address.append(addr1)
+        addr1 = interface.Ipv4().Address()
+        addr1.ip = "142.168.0.1"
+        addr1.prefix_length = 14
+        interface.ipv4.address.append(addr1)
 
         try:
             crud_service.create(self.netopeer_cli, interface)
@@ -114,9 +114,9 @@ class TestIetfInterfaces(SweetcombTestCase):
             str(interface.ipv4.address[0].prefix_length)
         self.assertIn(prefix, a.addr)
 
-        #prefix = interface.ipv4.address[1].ip + "/" + \
-                                #str(interface.ipv4.address[1].prefix_length)
-        #self.assertIn(prefix, a.addr)
+        prefix = interface.ipv4.address[1].ip + "/" + \
+            str(interface.ipv4.address[1].prefix_length)
+        self.assertIn(prefix, a.addr)
 
         #try:
             #crud_service.delete(self.netopeer_cli, interface)

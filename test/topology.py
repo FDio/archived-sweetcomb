@@ -41,7 +41,7 @@ class Topology:
             for proc in psutil.process_iter(attrs=['pid', 'name']):
                 name = proc.info['name']
                 if pname in name:
-                    print("Terminate: {}".format(name))
+                    #print("Terminate: {}".format(name))
                     proc.terminate()
         except ValueError as err:
             print(err)
@@ -72,7 +72,7 @@ class Topology:
             for proc in psutil.process_iter(attrs=['pid', 'name']):
                 name = proc.info['name']
                 if 'vpp' in name or 'sysrepo' in name or 'netopeer' in name:
-                    print("Kill: {}".format(name))
+                    #print("Kill: {}".format(name))
                     proc.kill()
         except ValueError as err:
             print(err)
