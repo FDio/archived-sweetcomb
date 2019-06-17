@@ -16,10 +16,6 @@
 #            -> libnetconf2 -> libyang
 #                           -> libssh (>=0.6.4)
 #
-#  gnmi      -> libsysrepo
-#            -> protobuf (>=3)
-#            -> libjsoncpp
-#
 #  sysrepo   -> libyang
 #            -> libredblack or libavl
 #            -> libev
@@ -65,9 +61,6 @@ LIBSSH_DEB = zlib1g-dev
 #Sum dependencies
 DEB_DEPENDS = ${BUILD_DEB} ${NETOPEER2_DEB} ${CHECKSTYLE_DEB} ${SCVPP_DEB} ${SYSREPO_DEB} ${LIBSSH_DEB}
 
-#Dependencies for grpc
-DEB_GNMI_DEPENDS = libpugixml-dev libjsoncpp-dev libtool pkg-config
-
 #Dependencies for automatic test
 DEB_TEST_DEPENDS = python3-pip python-pip libcurl4-openssl-dev libssh-dev \
 libxml2-dev libxslt1-dev libtool-bin
@@ -89,16 +82,14 @@ SYSREPO_RPM = libev-devel bison flex pcre-devel protobuf-c-devel protobuf-c-comp
 RPM_DEPENDS = ${BUILD_RPM} ${NETOPEER2_RPM} ${CHECKSTYLE_RPM} ${SCVPP_RPM} \
 	      ${SYSREPO_RPM}
 
-#Dependencies for grpc
-RPM_GNMI_DEPENDS = pugixml jsoncpp libtool pugixml-devel jsoncpp-devel ${GRPC_RPM}
-
 #Dependencies for automatic test
 RPM_TEST_DEPENDS = python36-devel python36-pip python-pip libxml2-devel \
 libxslt-devel libtool which cmake3
 
-.PHONY: help install-dep install-dep-extra install-vpp install-models uninstall-models \
-    install-dep-gnmi-extra build-scvpp build-plugins build-gnmi build-package docker \
-    docker-test test clean distclean _clean_dl _libssh _libyang _libnetconf2 _sysrepo _netopeer2
+.PHONY: help install-dep install-dep-extra install-vpp install-models \
+        uninstall-models build-scvpp build-plugins build-package docker \
+        docker-test test clean distclean _clean_dl _libssh _libyang \
+        _libnetconf2 _sysrepo _netopeer2
 
 help:
 	@echo "Make Targets:"
@@ -107,13 +98,11 @@ help:
 	@echo " install-vpp            - install released vpp"
 	@echo " install-models         - install YANG models"
 	@echo " uninstall-models       - uninstall YANG models"
-	@echo " install-dep-gnmi-extra - install software extra dependencips from source code for gNMI"
 	@echo " install-test-extra     - install software extra dependencies from source code for YDK"
 	@echo " build-scvpp            - build scvpp"
 	@echo " test-scvpp             - unit test for scvpp"
 	@echo " build-plugins          - build plugins"
 	@echo " test-plugins           - integration test for sweetcomb plugins"
-	@echo " build-gnmi             - build gNMIServer"
 	@echo " build-package          - build rpm or deb package"
 	@echo " docker                 - build sweetcomb in docker enviroment, with optional arguments :"
 	@echo "                          VPP_VERSION=release [master|release] specifies VPP version to be used"
@@ -242,26 +231,6 @@ _clean_dl:
 install-dep-extra: _clean_dl _libssh _libyang _libnetconf2 _sysrepo _netopeer2
 	@cd ../ && rm -rf $(BR)/downloads
 
-#Protobuf must not be compiled with multiple core, it requires too much memory
-#gRPC can be compiled with cmake or autotools. autotools has been choosen
-#if cmake is choosen use SSL, ZLIB distribution package and compile protobuf separately
-install-dep-gnmi-extra:
-ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
-	@sudo -E apt-get $(APT_ARGS) -y --force-yes install $(DEB_GNMI_DEPENDS)
-else ifeq ($(OS_ID),centos)
-	@sudo -E yum install -y $(RPM_GNMI_DEPENDS)
-else
-	$(error "This option currently works only on Ubuntu, Debian, Centos or openSUSE systems")
-endif
-	@rm -rf $(BR)/downloads
-	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
-	&& git clone --depth=1 -b v1.16.1 https://github.com/grpc/grpc \
-	&& cd grpc && git submodule update --init \
-	&& cd third_party/protobuf \
-	&& ./autogen.sh && ./configure && make install \
-	&& cd ../.. make && make install \
-	&&cd .. && rm -rf $(BR)/downloads
-
 install-vpp:
 	@echo "please install vpp as vpp's guide from source if failed"
 ifeq ($(PKG),deb)
@@ -294,12 +263,6 @@ build-plugins:
 
 test-plugins: install-models
 	@test/run_test.py --dir ./test/
-
-build-gnmi:
-	@mkdir -p $(BR)/build-gnmi/; cd $(BR)/build-gnmi/; \
-	cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/gnmi/;make; \
-	make install;
-	@# NEW INSTRUCTIONS TO BUILD-GNMI MUST BE DECLARED ON A NEW LINE WITH '@'
 
 build-package:
 	@mkdir -p $(BR)/build-package/; cd $(BR)/build-package/;\
@@ -339,13 +302,11 @@ clean:
 	@if [ -d $(BR)/build-scvpp ] ;   then cd $(BR)/build-scvpp   && make clean; fi
 	@if [ -d $(BR)/build-plugins ] ; then cd $(BR)/build-plugins && make clean; fi
 	@if [ -d $(BR)/build-package ] ; then cd $(BR)/build-package && make clean; fi
-	@if [ -d $(BR)/build-gnmi ] ;    then cd $(BR)/build-gnmi    && make clean; fi
 
 distclean:
 	@rm -rf $(BR)/build-scvpp
 	@rm -rf $(BR)/build-plugins
 	@rm -rf $(BR)/build-package
-	@rm -rf $(BR)/build-gnmi
 
 docker:
 	@scripts/docker.sh
