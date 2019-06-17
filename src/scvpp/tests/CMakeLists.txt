@@ -30,6 +30,7 @@ add_executable(scvpp_test ${TEST_SRC})
 target_link_libraries(scvpp_test ${CMOCKA_LIBRARIES} scvpp_a)
 target_include_directories(scvpp_test PRIVATE ../inc)
 add_test(scvpp_test ./scvpp_test)
+set_tests_properties(scvpp_test PROPERTIES TIMEOUT 60)
 
 if(valgrind_FOUND)
     add_test(scvpp_valgrind valgrind
@@ -37,4 +38,5 @@ if(valgrind_FOUND)
         --leak-check=full --show-leak-kinds=all
         ./scvpp_test
     )
+    set_tests_properties(scvpp_valgrind PROPERTIES TIMEOUT 60)
 endif(valgrind_FOUND)

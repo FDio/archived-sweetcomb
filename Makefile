@@ -253,7 +253,7 @@ build-scvpp:
 	@# NEW INSTRUCTIONS TO BUILD-SCVPP MUST BE DECLARED ON A NEW LINE WITH '@'
 
 test-scvpp: build-scvpp
-	@cd $(BR)/build-scvpp; make test
+	@cd $(BR)/build-scvpp; make test ARGS="-V"
 
 build-plugins:
 	@mkdir -p $(BR)/build-plugins/; cd $(BR)/build-plugins/; \

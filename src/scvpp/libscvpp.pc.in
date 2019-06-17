@@ -4,7 +4,7 @@ libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 
 Name: scvpp
 Description: VPP-Sweetcomb-Sysrepo integration library
-Version: 0.0.1
+Version: @PROJECT_VERSION@
 Libs: -L${libdir} -lscvpp
 Cflags: -I${includedir}
 
