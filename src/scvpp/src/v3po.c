@@ -31,7 +31,7 @@ DEFINE_VAPI_MSG_IDS_TAPV2_API_JSON
 
 // Delete tapv2
 
-VAPI_RETVAL_CB(tap_delete_v2);
+VAPI_REQUEST_CB(tap_delete_v2);
 
 static vapi_error_e bin_api_delete_tapv2(u32 sw_if_index)
 {
@@ -69,7 +69,7 @@ int delete_tapv2(char *iface_name)
 
 // Create tapv2
 
-VAPI_RETVAL_CB(tap_create_v2);
+VAPI_REQUEST_CB(tap_create_v2);
 
 int create_tapv2(tapv2_create_t *query)
 {

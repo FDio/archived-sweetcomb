@@ -125,7 +125,7 @@ struct elt* interface_dump_all()
     return stack;
 }
 
-VAPI_RETVAL_CB(sw_interface_set_flags);
+VAPI_REQUEST_CB(sw_interface_set_flags);
 
 int interface_enable(const char *interface_name, const bool enable)
 {

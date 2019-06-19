@@ -64,7 +64,7 @@ bin_api_nat44_interface_dump(vapi_payload_nat44_interface_details *reply)
     return rv;
 }
 
-VAPI_RETVAL_CB(nat44_add_del_interface_addr);
+VAPI_REQUEST_CB(nat44_add_del_interface_addr);
 
 static vapi_error_e
 bin_api_nat44_add_del_interface_addr(
@@ -87,7 +87,7 @@ bin_api_nat44_add_del_interface_addr(
     return rv;
 }
 
-VAPI_RETVAL_CB(nat44_add_del_address_range);
+VAPI_REQUEST_CB(nat44_add_del_address_range);
 
 static vapi_error_e
 bin_api_nat44_add_del_addr_range(
@@ -111,7 +111,7 @@ bin_api_nat44_add_del_addr_range(
     return rv;
 }
 
-VAPI_RETVAL_CB(nat44_add_del_static_mapping);
+VAPI_REQUEST_CB(nat44_add_del_static_mapping);
 
 static vapi_error_e
 bin_api_nat44_add_del_static_mapping(
@@ -173,7 +173,7 @@ bin_api_nat44_static_mapping_dump(
     return rv;
 }
 
-VAPI_RETVAL_CB(nat44_forwarding_enable_disable);
+VAPI_REQUEST_CB(nat44_forwarding_enable_disable);
 
 static vapi_error_e bin_api_nat44_forwarding_enable_disable(
     const vapi_payload_nat44_forwarding_enable_disable *msg)
@@ -194,7 +194,7 @@ static vapi_error_e bin_api_nat44_forwarding_enable_disable(
     return rv;
 }
 
-VAPI_RETVAL_CB(nat_set_workers);
+VAPI_REQUEST_CB(nat_set_workers);
 
 static vapi_error_e
 bin_api_nat_set_workers(const vapi_payload_nat_set_workers *msg)

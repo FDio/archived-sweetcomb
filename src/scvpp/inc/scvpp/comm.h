@@ -79,29 +79,35 @@ DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
  * parameter in function prototype. */
 #define UNUSED(x) (void)x
 
-#define VAPI_RETVAL_CB(api_name) \
+#define VAPI_REQUEST_CB(api_name) \
 static vapi_error_e \
-api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
-                vapi_payload_##api_name##_reply * reply) \
+api_name##_cb (struct vapi_ctx_s *ctx, void *callback_ctx, vapi_error_e rv, \
+		bool is_last, vapi_payload_##api_name##_reply * reply) \
 { \
-    UNUSED(ctx); UNUSED(caller_ctx); UNUSED(rv); UNUSED(is_last); \
+    UNUSED(ctx); UNUSED(rv); UNUSED(is_last); \
+    if (callback_ctx) { \
+        memcpy(callback_ctx, reply, sizeof(vapi_payload_##api_name##_reply)); \
+    } \
     return reply->retval; \
 }
 
-#define VAPI_COPY_CB(api_name) \
+#define VAPI_REQUEST_CB_EXTRA(api_name, member) \
 static vapi_error_e \
-api_name##_cb (vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_last, \
-                vapi_payload_##api_name##_reply * reply) \
+api_name##_cb (struct vapi_ctx_s *ctx, void *callback_ctx, vapi_error_e rv, \
+		bool is_last, vapi_payload_##api_name##_reply * reply) \
 { \
     UNUSED(ctx); UNUSED(rv); UNUSED(is_last); \
-    vapi_payload_##api_name##_reply * passed; \
-    if (caller_ctx) \
-    { \
-        passed = (vapi_payload_##api_name##_reply *)caller_ctx; \
-        *passed = *reply; \
+    vapi_payload_##api_name##_reply **p = callback_ctx; \
+    int size = sizeof(vapi_payload_##api_name##_reply) + reply->member; \
+    if (p) { \
+        *p = malloc(size); \
+        if (!*p) { \
+            return VAPI_ENOMEM; \
+        } \
+        memcpy(*p, reply, size); \
     } \
-    return VAPI_OK; \
-}\
+    return reply->retval; \
+}
 
 #define VAPI_CALL_MODE(call_code, vapi_mode) \
     do \

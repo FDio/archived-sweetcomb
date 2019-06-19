@@ -24,7 +24,7 @@
 // Use VAPI macros to define symbols
 DEFINE_VAPI_MSG_IDS_IP_API_JSON
 
-VAPI_RETVAL_CB(sw_interface_add_del_address);
+VAPI_REQUEST_CB(sw_interface_add_del_address);
 
 static vapi_error_e
 bin_api_sw_interface_add_del_address(u32 sw_if_index, bool is_add, bool is_ipv6,
@@ -53,7 +53,7 @@ bin_api_sw_interface_add_del_address(u32 sw_if_index, bool is_add, bool is_ipv6,
     return rv;
 }
 
-VAPI_COPY_CB(ip_add_del_route)
+VAPI_REQUEST_CB(ip_add_del_route)
 
 static vapi_error_e
 bin_api_ip_add_del_route(vapi_payload_ip_add_del_route_reply * reply,
