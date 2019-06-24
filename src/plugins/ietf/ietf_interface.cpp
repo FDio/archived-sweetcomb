@@ -223,6 +223,26 @@ ietf_interface_ipv46_address_change_cb(sr_session_ctx_t *session,
         if_name = sr_xpath_key_value(new_val ? new_val->xpath : old_val->xpath,
                                      "interface", "name", &xpath_ctx);
         sr_xpath_recover(&xpath_ctx);
+        if ((new_val && SR_LIST_T == new_val->type) ||
+            (old_val && SR_LIST_T == old_val->type)) {
+
+            if (del && !old_addr.empty()) {
+                op_rc = ipv46_config_add_remove(if_name, old_addr, old_prefix,
+                                                false /* del */);
+            }
+
+            if (create && !new_addr.empty()) {
+                op_rc = ipv46_config_add_remove(if_name, new_addr, new_prefix,
+                                                true /* add */);
+            }
+
+            create = false;
+            del = false;
+            new_addr.clear();
+            old_addr.clear();
+            new_prefix = 0;
+            old_prefix = 0;
+        }
 
         try {
             switch (op) {

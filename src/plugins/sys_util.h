@@ -30,11 +30,15 @@ extern "C" {
 
 #include <string.h>
 
+extern bool export_backup;
+
 /* BEGIN sysrepo utils */
 
 #define foreach_change(ds, it, oper, old, new) \
     while( (event != SR_EV_ABORT) && \
             sr_get_change_next(ds, it, &oper, &old, &new) == SR_ERR_OK)
+
+#define BACKUP_DIR_PATH "/tmp/sweetcomb"
 
 #define XPATH_SIZE 2000
 #define NOT_AVAL "NOT AVAILABLE"

@@ -16,83 +16,171 @@
  */
 
 #include "sc_plugins.h"
-
+#include "sys_util.h"
 #include <dirent.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
 
 #include <vom/hw.hpp>
 #include <vom/om.hpp>
 
 static int vpp_pid_start;
+bool export_backup = false;
 
 sc_plugin_main_t sc_plugin_main;
 
 using namespace VOM;
+
+#define _DIRENT_NAME 256
+#define CMDLINE_MAX _DIRENT_NAME + 15
+#define VPP_FULL_PATH "/usr/bin/vpp"
 
 sc_plugin_main_t *sc_get_plugin_main()
 {
     return &sc_plugin_main;
 }
 
-/* get vpp pid in system */
+/**
+ * @brief get one pid of any running vpp process.
+ * @return Return vpp pid or negative value if error.
+ */
 int get_vpp_pid()
 {
     DIR *dir;
     struct dirent *ptr;
     FILE *fp;
-    char filepath[50];
-    char filetext[20];
+    char filepath[CMDLINE_MAX];
+    char filetext[strlen(VPP_FULL_PATH)];
+    char *first = NULL;
+    size_t cnt;
 
     dir = opendir("/proc");
-    int vpp_pid = 0;
+    if (dir == NULL)
+        return -errno;
+
     /* read vpp pid file in proc, return pid of vpp */
-    if (NULL != dir)
+    while (NULL != (ptr = readdir(dir)))
     {
-        while (NULL != (ptr =readdir(dir)))
-        {
-            if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
-                continue;
+        if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
+            continue;
 
-            if (DT_DIR != ptr->d_type)
-                continue;
+        if (DT_DIR != ptr->d_type)
+            continue;
 
-            sprintf(filepath, "/proc/%s/cmdline",ptr->d_name);
-            fp = fopen(filepath, "r");
+        /* Open cmdline of PID */
+        snprintf(filepath, CMDLINE_MAX, "/proc/%s/cmdline", ptr->d_name);
+        fp = fopen(filepath, "r");
+        if (fp == NULL)
+            continue;
 
-            if (NULL != fp)
-            {
-                fread(filetext, 1, 13, fp);
-                filetext[12] = '\0';
+        /* Write '/0' char in filetext array to prevent stack reading */
+        bzero(filetext, strlen(VPP_FULL_PATH));
 
-                if (filetext == strstr(filetext, "/usr/bin/vpp"))
-                    vpp_pid = atoi(ptr->d_name);
+        /* Read the string written in cmdline file */
+        cnt = fread(filetext, sizeof(char), sizeof(VPP_FULL_PATH), fp);
+        if (cnt == 0)
+            continue;
+        filetext[cnt] = '\0';
 
-                fclose(fp);
-            }
+        /* retrieve string before first space */
+        first = strtok(filetext, " ");
+        if (first == NULL) //unmet space delimiter
+            continue;
+
+        /* One VPP process has been found */
+        if (!strcmp(first, "vpp") || !strcmp(first, VPP_FULL_PATH)) {
+            fclose(fp);
+            closedir(dir);
+            return atoi(ptr->d_name);
         }
-        closedir(dir);
+
+        fclose(fp);
     }
-    return vpp_pid;
+
+    closedir(dir);
+
+    return -ESRCH;
 }
 
+#define RESTORECMDLINE_MAX (79 + _DIRENT_NAME + _DIRENT_NAME)
+
+static int restore_backup()
+{
+    DIR *dir;
+    struct dirent *ptr;
+    char module_name[_DIRENT_NAME] = {0};
+    int rc = 0;
+    char cmd[RESTORECMDLINE_MAX];
+    const char *pos = NULL;
+
+    dir = opendir(BACKUP_DIR_PATH);
+    if (NULL == dir)
+    {
+        if (ENOENT != errno && ENOTDIR != errno) {
+            SRP_LOG_ERR("Failed read directory: %s, errno: %u, %s",
+                        BACKUP_DIR_PATH, errno, strerror(errno));
+            return -1;
+        }
+
+        export_backup = true;
+        return 0;
+    }
+
+    while (NULL != (ptr = readdir(dir)))
+    {
+        if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
+        {
+            continue;
+        }
+
+        if (DT_REG != ptr->d_type)
+        {
+            continue;
+        }
+
+        pos = strstr(ptr->d_name, ".json");
+        if (!pos) {
+            continue;
+        }
+
+        strncpy(module_name, ptr->d_name, pos - ptr->d_name);
+
+        snprintf(cmd, sizeof(cmd), "/usr/bin/sysrepocfg --format=json -i "\
+        "/tmp/sweetcomb/%s --datastore=running %s &", ptr->d_name,
+        module_name);
+
+        rc = system(cmd);
+        if (0 != rc) {
+            SRP_LOG_ERR("Failed restore backup for module: %s, errno: %s",
+                        module_name, strerror(errno));
+            break;
+        }
+    }
+
+    closedir(dir);
+
+    export_backup = true;
+
+    return rc;
+}
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
-    int rc;
+    int rc = 0;
 
     sc_plugin_main.session = session;
 
-    /* Connection to VAPI via VOM and VOM database */
     HW::init();
     OM::init();
-    while (HW::connect() != true);
-    SRP_LOG_INF_MSG("Connection to VPP established");
 
-    try {
-        OM::populate("boot");
-    } catch (...) {
-        SRP_LOG_ERR_MSG("Fail populating VOM");
-        exit(1);
-    }
+    SRP_LOG_INF_MSG("Connect to VPP");
+
+    while (HW::connect() != true);
+
+    SRP_LOG_INF_MSG("Success connect to VPP");
+
+    OM::populate("boot");
 
     rc = sc_call_all_init_function(&sc_plugin_main);
     if (rc != SR_ERR_OK) {
@@ -102,15 +190,97 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
     /* set subscription as our private context */
     *private_ctx = sc_plugin_main.subscription;
-
-    /* Get initial PID of VPP process */
+    /* get the vpp pid sweetcomb connected, we assumed that only one vpp is run in system */
     vpp_pid_start = get_vpp_pid();
+    if (0 > vpp_pid_start)
+    {
+        return SR_ERR_DISCONNECT;
+    }
+
+    rc = restore_backup();
+    if (0 != rc) {
+        SRP_LOG_DBG_MSG("Backup restore failed");
+        return SR_ERR_INIT_FAILED;
+    }
+
+    SRP_LOG_DBG_MSG("Backup successfully restore");
 
     return SR_ERR_OK;
 }
 
+static int remove_directory(const char *path)
+{
+    DIR *dir = opendir(path);
+    struct dirent *ptr;
+    size_t path_len = strlen(path);
+    char *buf;
+    size_t len;
+    int rc = 0;
+
+    if (NULL == dir)
+    {
+        if (ENOTDIR != errno) {
+            SRP_LOG_ERR("Failed read directory: %s, errno: %s",
+                        BACKUP_DIR_PATH, strerror(errno));
+            return -1;
+        }
+
+        return 0;
+    }
+
+    while (NULL != (ptr = readdir(dir)))
+    {
+        if ((0 == strcmp(ptr->d_name, ".")) ||(0 == strcmp(ptr->d_name, "..")))
+        {
+            continue;
+        }
+
+        len = path_len + strlen(ptr->d_name) + 2;
+        buf = (char *) malloc(len * sizeof(char));
+        if (NULL == buf)
+        {
+            SRP_LOG_ERR("Out off memory, errno: %s", strerror(errno));
+            return SR_ERR_NOMEM;
+        }
+
+        snprintf(buf, len, "%s/%s", path, ptr->d_name);
+
+        if (DT_DIR == ptr->d_type)
+        {
+            remove_directory(buf);
+        }
+
+        rc = remove(buf);
+        if (0 != rc)
+        {
+            SRP_LOG_ERR("failed remove file: %s, error: %s.",
+                        buf, strerror(errno));
+        }
+
+        free(buf);
+    }
+
+    closedir(dir);
+
+    rc = remove(path);
+    if (0 == rc)
+    {
+        SRP_LOG_DBG("remove directory: %s.", path);
+    }
+        else
+    {
+        SRP_LOG_ERR("failed remove directory: %s, error: %s.",
+                    path, strerror(errno));
+    }
+
+    return rc;
+}
+
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 {
+    int rc = 0;
+    struct stat st = {0};
+
     sc_call_all_exit_function(&sc_plugin_main);
 
     /* subscription was set as our private context */
@@ -118,29 +288,40 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
         sr_unsubscribe(session, (sr_subscription_ctx_t*) private_ctx);
     SRP_LOG_DBG_MSG("unload plugin ok.");
 
+    if (0 == stat(BACKUP_DIR_PATH, &st)) {
+        rc = remove_directory(BACKUP_DIR_PATH);
+        if (0 == rc) {
+            SRP_LOG_DBG_MSG("remove backup ok.");
+        } else {
+            SRP_LOG_ERR_MSG("failed remove backup.");
+        }
+    }
+
     HW::disconnect();
     SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
+
 }
 
 int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)
 {
-    int vpp_pid_now = get_vpp_pid();
+   /* health check, will use shell to detect vpp when plugin is loaded */
+   /* health_check will run every 10 seconds in loop*/
+   int vpp_pid_now = get_vpp_pid();
 
-    if (vpp_pid_now == vpp_pid_start)
-        return SR_ERR_OK; //VPP has not crashed
+   if(vpp_pid_now != vpp_pid_start)
+   {
+       SRP_LOG_DBG_MSG("vpp is down.\ntry connect to vpp.");
+       HW::disconnect();
+       while (HW::connect() != true)
+       {
+           SRP_LOG_DBG_MSG("try connect to vpp.");
+       };
 
-    /* Wait until we succeed connecting to VPP */
-    HW::disconnect();
-    while (HW::connect() != true) {
-        SRP_LOG_DBG_MSG("Try connecting to VPP again");
-    };
+       SRP_LOG_DBG_MSG("connect to vpp");
+       OM::replay();
 
-    SRP_LOG_DBG_MSG("Connection to VPP established again");
+       vpp_pid_start = get_vpp_pid();
+   }
 
-    /* Though VPP has crashed, VOM database has kept the configuration.
-     * This function replays the previous configuration to reconfigure VPP
-     * so that VPP state matches sysrepo RUNNING DS and VOM database. */
-    OM::replay();
-
-    return SR_ERR_OK;
+   return SR_ERR_OK;
 }

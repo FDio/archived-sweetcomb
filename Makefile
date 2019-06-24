@@ -47,7 +47,7 @@ endif
 #DEB#
 #####
 #Dependencies to build
-BUILD_DEB = curl build-essential autoconf automake ccache git cmake wget coreutils
+BUILD_DEB = curl build-essential autoconf automake ccache git cmake wget coreutils libboost-system-dev libboost-dev libboost-program-options-dev
 #Dependencies for netopeer2
 NETOPEER2_DEB = libssl-dev pkgconf
 #Dependencies for checkstyle
@@ -65,11 +65,14 @@ DEB_DEPENDS = ${BUILD_DEB} ${NETOPEER2_DEB} ${CHECKSTYLE_DEB} ${SCVPP_DEB} ${SYS
 DEB_TEST_DEPENDS = python3-pip python-pip libcurl4-openssl-dev libssh-dev \
 libxml2-dev libxslt1-dev libtool-bin
 
+#Dependencies for automatic test
+DEB_TEST_DEPENDS = python3-pip python-pip libcurl4-openssl-dev libpcre3-dev libssh-dev libxml2-dev libxslt1-dev libtool-bin
+
 #####
 #RPM#
 #####
 #Dependencies to build
-BUILD_RPM = curl autoconf automake ccache cmake3 wget gcc gcc-c++ git
+BUILD_RPM = curl autoconf automake ccache cmake3 wget gcc gcc-c++ git boost-system
 #Dependencies for netopeer2
 NETOPEER2_RPM = openssl-devel
 #Dependencies for checkstyle

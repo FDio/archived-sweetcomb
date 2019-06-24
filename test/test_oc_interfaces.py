@@ -38,6 +38,7 @@ class TestOcInterfaces(SweetcombTestCase):
 
         self.topology.close_topology()
 
+    @unittest.skip("VOM now don't support OC")
     def test_interface(self):
 
         self.logger.info("OC_INTERFACE_START_001")

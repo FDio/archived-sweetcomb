@@ -16,6 +16,7 @@
 #
 
 import os
+import sys
 import subprocess
 from vpp_controler import Vpp_controler
 from netconf_client import NetConfClient
@@ -28,13 +29,22 @@ from ydk.errors import YClientError
 
 
 class Topology:
-    debug = False
-
     def __init__(self):
+        self.debug = True
         self.process = []
 
     def __del__(self):
         self._kill_process()
+
+    def _kill_pr(self, pname):
+        try:
+            for proc in psutil.process_iter(attrs=['pid', 'name']):
+                name = proc.info['name']
+                if pname in name:
+                    #print("Terminate: {}".format(name))
+                    proc.terminate()
+        except ValueError as err:
+            print(err)
 
     def _kill_process(self):
         if self.debug:
@@ -48,12 +58,24 @@ class Topology:
 
             process.terminate()
 
-        for proc in psutil.process_iter(attrs=['pid', 'name']):
-            name = proc.info['name']
-            if 'vpp' in name or 'sysrepo' in name or 'netopeer' in name:
-                proc.kill()
-
         self.process = []
+
+        self._kill_pr('netopeer')
+        self._kill_pr('sysrepo-plugind')
+        time.sleep(1)
+        self._kill_pr('sysrepod')
+        self._kill_pr('vpp')
+
+        #Clean for your self
+        time.sleep(1)
+        try:
+            for proc in psutil.process_iter(attrs=['pid', 'name']):
+                name = proc.info['name']
+                if 'vpp' in name or 'sysrepo' in name or 'netopeer' in name:
+                    #print("Kill: {}".format(name))
+                    proc.kill()
+        except ValueError as err:
+            print(err)
 
     def _prepare_linux_enviroment(self):
         ip = IPRoute()
@@ -86,7 +108,7 @@ class Topology:
                                         stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.sysrepo)
 
-    def _start_sysrepo_plugins(self):
+    def start_sysrepo_plugins(self):
         #TODO: Add to log
         #print("Start sysrepo plugins.")
         #TODO: Need property close.
@@ -95,7 +117,8 @@ class Topology:
             params = "-l 4"
         else:
             params = "-l 3"
-        self.splugin = subprocess.Popen(["sysrepo-plugind", "-d", params],
+        params = "-l 4"
+        self.splugin = subprocess.Popen(["sysrepo-plugind", "-D", "-d", params],
                                         stdout=subprocess.PIPE, stderr=err)
         self.process.append(self.splugin)
 
@@ -114,7 +137,7 @@ class Topology:
         self.process.append(self.netopeer_cli)
         self.netopeer_cli.spawn()
 
-    def _start_vpp(self):
+    def start_vpp(self):
         #print("Start VPP.")
         self.vpp = Vpp_controler(self.debug)
         self.vpp.spawn()
@@ -124,7 +147,7 @@ class Topology:
         #print("Start NetconfClient")
         try:
             self.netconf_client = NetConfClient(address="127.0.0.1",
-                                                username="user", password="user")
+                                                username="root", password="0000")
             self.process.append(self.netconf_client)
         except RuntimeError as err:
             print("NetConfClient failed, {}".format(err))
@@ -138,10 +161,9 @@ class Topology:
     def create_topology(self, debug=False):
         self.debug = debug
         self._prepare_linux_enviroment()
-        self._start_vpp()
-        self._start_sysrepo()
-        time.sleep(1)
-        self._start_sysrepo_plugins()
+        self.start_vpp()
+        #self._start_sysrepo()
+        self.start_sysrepo_plugins()
         self._start_netopeer_server()
 
         #Wait for netopeer server
