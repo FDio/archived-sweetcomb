@@ -55,10 +55,10 @@ bin_api_nat44_interface_dump(vapi_payload_nat44_interface_details *reply)
 
     ARG_CHECK(VAPI_EINVAL, reply);
 
-    mp = vapi_alloc_nat44_interface_dump(g_vapi_ctx);
+    mp = vapi_alloc_nat44_interface_dump(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
-    VAPI_CALL(vapi_nat44_interface_dump(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_nat44_interface_dump(sc_vpp_main.vapi_ctx, mp,
                                         nat44_interface_dump_cb, reply));
 
     return rv;
@@ -75,12 +75,12 @@ bin_api_nat44_add_del_interface_addr(
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat44_add_del_interface_addr(g_vapi_ctx);
+    mp = vapi_alloc_nat44_add_del_interface_addr(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
-    VAPI_CALL(vapi_nat44_add_del_interface_addr(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_nat44_add_del_interface_addr(sc_vpp_main.vapi_ctx, mp,
                                                 nat44_add_del_interface_addr_cb,
                                                 NULL));
 
@@ -98,13 +98,13 @@ bin_api_nat44_add_del_addr_range(
 
     ARG_CHECK(VAPI_EINVAL, range);
 
-    mp = vapi_alloc_nat44_add_del_address_range(g_vapi_ctx);
+    mp = vapi_alloc_nat44_add_del_address_range(sc_vpp_main.vapi_ctx);
 
     assert(NULL != mp);
 
     mp->payload = *range;
 
-    VAPI_CALL(vapi_nat44_add_del_address_range(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_nat44_add_del_address_range(sc_vpp_main.vapi_ctx, mp,
                                                nat44_add_del_address_range_cb,
                                                NULL));
 
@@ -122,12 +122,12 @@ bin_api_nat44_add_del_static_mapping(
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat44_add_del_static_mapping(g_vapi_ctx);
+    mp = vapi_alloc_nat44_add_del_static_mapping(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
-    VAPI_CALL(vapi_nat44_add_del_static_mapping(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_nat44_add_del_static_mapping(sc_vpp_main.vapi_ctx, mp,
                                                 nat44_add_del_static_mapping_cb,
                                                 NULL));
 
@@ -163,10 +163,10 @@ bin_api_nat44_static_mapping_dump(
 
     ARG_CHECK(VAPI_EINVAL, reply);
 
-    msg = vapi_alloc_nat44_static_mapping_dump(g_vapi_ctx);
+    msg = vapi_alloc_nat44_static_mapping_dump(sc_vpp_main.vapi_ctx);
     assert(NULL != msg);
 
-    VAPI_CALL(vapi_nat44_static_mapping_dump(g_vapi_ctx, msg,
+    VAPI_CALL(vapi_nat44_static_mapping_dump(sc_vpp_main.vapi_ctx, msg,
                                              nat44_static_mapping_dump_cb,
                                              reply));
 
@@ -183,13 +183,13 @@ static vapi_error_e bin_api_nat44_forwarding_enable_disable(
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat44_forwarding_enable_disable(g_vapi_ctx);
+    mp = vapi_alloc_nat44_forwarding_enable_disable(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
     VAPI_CALL(vapi_nat44_forwarding_enable_disable(
-        g_vapi_ctx, mp, nat44_forwarding_enable_disable_cb, NULL));
+        sc_vpp_main.vapi_ctx, mp, nat44_forwarding_enable_disable_cb, NULL));
 
     return rv;
 }
@@ -204,12 +204,12 @@ bin_api_nat_set_workers(const vapi_payload_nat_set_workers *msg)
 
     ARG_CHECK(VAPI_EINVAL, msg);
 
-    mp = vapi_alloc_nat_set_workers(g_vapi_ctx);
+    mp = vapi_alloc_nat_set_workers(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     mp->payload = *msg;
 
-    VAPI_CALL(vapi_nat_set_workers(g_vapi_ctx, mp, nat_set_workers_cb, NULL));
+    VAPI_CALL(vapi_nat_set_workers(sc_vpp_main.vapi_ctx, mp, nat_set_workers_cb, NULL));
 
     return rv;
 }

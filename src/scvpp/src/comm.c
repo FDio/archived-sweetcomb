@@ -14,51 +14,97 @@
  */
 #include <scvpp/comm.h>
 
-#include <assert.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <stdio.h>
+#include <dirent.h>
 
 #define APP_NAME "sweetcomb_vpp"
 #define MAX_OUTSTANDING_REQUESTS 4
 #define RESPONSE_QUEUE_SIZE 2
 
-vapi_ctx_t g_vapi_ctx = NULL;
-vapi_mode_e g_vapi_mode = VAPI_MODE_NONBLOCKING;
+sc_vpp_main_t sc_vpp_main = {
+	.vapi_ctx = NULL,
+	.vapi_mode = VAPI_MODE_BLOCKING,
+	.pid = 0
+};
 
-int sc_connect_vpp()
+sc_vpp_main_t *sc_connect_vpp()
 {
-    if (g_vapi_ctx == NULL)
-    {
-        vapi_error_e rv = vapi_ctx_alloc(&g_vapi_ctx);
-        if (rv != VAPI_OK) {
-            g_vapi_ctx = NULL;
-            return -1;
-        }
-        rv = vapi_connect(g_vapi_ctx, APP_NAME, NULL,
-                          MAX_OUTSTANDING_REQUESTS, RESPONSE_QUEUE_SIZE,
-                          VAPI_MODE_BLOCKING, true);
-        if (rv != VAPI_OK)
-        {
-            vapi_ctx_free(g_vapi_ctx);
-            g_vapi_ctx = NULL;
-            return -1;
-        }
-    }
+	vapi_error_e rv;
 
-    return 0;
+	if (sc_vpp_main.vapi_ctx == NULL) {
+		if ((rv = vapi_ctx_alloc(&sc_vpp_main.vapi_ctx)) != VAPI_OK) {
+			return NULL;
+		}
+
+		if ((rv =
+		     vapi_connect(sc_vpp_main.vapi_ctx, APP_NAME, NULL,
+				  MAX_OUTSTANDING_REQUESTS, RESPONSE_QUEUE_SIZE,
+				  sc_vpp_main.vapi_mode, true)) != VAPI_OK) {
+			vapi_ctx_free(sc_vpp_main.vapi_ctx);
+			sc_vpp_main.vapi_ctx = NULL;
+			return NULL;
+		}
+	}
+
+	sc_vpp_main.pid = sc_get_vpp_pid();
+	pthread_mutex_init(&sc_vpp_main.vapi_lock, NULL);
+	return &sc_vpp_main;
 }
 
-int sc_disconnect_vpp()
+void sc_disconnect_vpp()
 {
-    if (NULL != g_vapi_ctx)
-    {
-        vapi_disconnect(g_vapi_ctx);
-        vapi_ctx_free(g_vapi_ctx);
-        g_vapi_ctx = NULL;
-    }
-    return 0;
+	if (NULL != sc_vpp_main.vapi_ctx) {
+		pthread_mutex_destroy(&sc_vpp_main.vapi_lock);
+		sc_vpp_main.pid = 0;
+		vapi_disconnect(sc_vpp_main.vapi_ctx);
+		vapi_ctx_free(sc_vpp_main.vapi_ctx);
+		sc_vpp_main.vapi_ctx = NULL;
+	}
+}
+
+/* get vpp pid in system */
+pid_t sc_get_vpp_pid()
+{
+	DIR *dir;
+	struct dirent *ptr;
+	FILE *fp;
+	char cmdline_path[PATH_MAX];
+	char cmdline_data[PATH_MAX];
+	const char vpp_path[] = "/usr/bin/vpp";
+
+	dir = opendir("/proc");
+	pid_t pid = 0;
+	/* read vpp pid file in proc, return pid of vpp */
+	if (NULL != dir) {
+		while (NULL != (ptr = readdir(dir))) {
+			if ((0 == strcmp(ptr->d_name, "."))
+			    || (0 == strcmp(ptr->d_name, ".."))) {
+				continue;
+			}
+
+			if (DT_DIR != ptr->d_type) {
+				continue;
+			}
+
+			sprintf(cmdline_path, "/proc/%s/cmdline", ptr->d_name);
+			fp = fopen(cmdline_path, "r");
+
+			if (NULL != fp) {
+				fread(cmdline_data, 1, sizeof(vpp_path), fp);
+				cmdline_data[sizeof(vpp_path) - 1] = '\0';
+
+				if (cmdline_data ==
+				    strstr(cmdline_data, "/usr/bin/vpp")) {
+					pid = atoi(ptr->d_name);
+				}
+
+				fclose(fp);
+			}
+		}
+		closedir(dir);
+	}
+
+	return pid;
 }
 
 int sc_end_with(const char* str, const char* end)

@@ -38,12 +38,12 @@ static vapi_error_e bin_api_delete_tapv2(u32 sw_if_index)
     vapi_msg_tap_delete_v2 *mp;
     vapi_error_e rv;
 
-    mp = vapi_alloc_tap_delete_v2(g_vapi_ctx);
+    mp = vapi_alloc_tap_delete_v2(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     mp->payload.sw_if_index = sw_if_index;
 
-    VAPI_CALL(vapi_tap_delete_v2(g_vapi_ctx, mp, tap_delete_v2_cb, NULL));
+    VAPI_CALL(vapi_tap_delete_v2(sc_vpp_main.vapi_ctx, mp, tap_delete_v2_cb, NULL));
     if (rv != VAPI_OK)
         return -rv;
 
@@ -76,12 +76,12 @@ int create_tapv2(tapv2_create_t *query)
     vapi_msg_tap_create_v2 *mp;
     vapi_error_e rv;
 
-    mp = vapi_alloc_tap_create_v2(g_vapi_ctx);
+    mp = vapi_alloc_tap_create_v2(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     memcpy(&mp->payload, query, sizeof(tapv2_create_t));
 
-    VAPI_CALL(vapi_tap_create_v2(g_vapi_ctx, mp, tap_create_v2_cb, NULL));
+    VAPI_CALL(vapi_tap_create_v2(sc_vpp_main.vapi_ctx, mp, tap_create_v2_cb, NULL));
     if (rv != VAPI_OK)
         return -EAGAIN;
 

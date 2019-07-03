@@ -33,6 +33,9 @@ typedef struct sc_plugin_main_t {
     /* List of init/exit functions to call, setup by constructors */
     _sc_init_function_list_elt_t *init_function_registrations;
     _sc_exit_function_list_elt_t *exit_function_registrations;
+
+	/* VPP main structure */
+	sc_vpp_main_t *vpp_main;
 } sc_plugin_main_t;
 
 sc_plugin_main_t *sc_get_plugin_main();

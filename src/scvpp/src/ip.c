@@ -36,7 +36,7 @@ bin_api_sw_interface_add_del_address(u32 sw_if_index, bool is_add, bool is_ipv6,
 
     ARG_CHECK(VAPI_EINVAL, ip_address);
 
-    mp = vapi_alloc_sw_interface_add_del_address(g_vapi_ctx);
+    mp = vapi_alloc_sw_interface_add_del_address(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     mp->payload.sw_if_index = sw_if_index;
@@ -47,7 +47,7 @@ bin_api_sw_interface_add_del_address(u32 sw_if_index, bool is_add, bool is_ipv6,
     if (sc_aton(ip_address, mp->payload.address, VPP_IP4_ADDRESS_LEN))
         return VAPI_EINVAL;
 
-    VAPI_CALL(vapi_sw_interface_add_del_address(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_sw_interface_add_del_address(sc_vpp_main.vapi_ctx, mp,
                                         sw_interface_add_del_address_cb, NULL));
 
     return rv;
@@ -72,7 +72,7 @@ bin_api_ip_add_del_route(vapi_payload_ip_add_del_route_reply * reply,
     if (!next_interface && !next_hop)
         return VAPI_EINVAL;
 
-    mp = vapi_alloc_ip_add_del_route(g_vapi_ctx, 1);
+    mp = vapi_alloc_ip_add_del_route(sc_vpp_main.vapi_ctx, 1);
     assert(NULL != mp);
 
     if (next_interface) {
@@ -92,7 +92,7 @@ bin_api_ip_add_del_route(vapi_payload_ip_add_del_route_reply * reply,
     if (next_hop) //next hop ip is not mandatory
         sc_aton(next_hop, mp->payload.next_hop_address, VPP_IP4_ADDRESS_LEN);
 
-    VAPI_CALL(vapi_ip_add_del_route(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_ip_add_del_route(sc_vpp_main.vapi_ctx, mp,
                                     ip_add_del_route_cb, reply));
 
     return rv;
@@ -123,13 +123,13 @@ bin_api_ip_address_dump(u32 sw_if_index, bool is_ipv6,
     vapi_msg_ip_address_dump *mp;
     vapi_error_e rv;
 
-    mp = vapi_alloc_ip_address_dump(g_vapi_ctx);
+    mp = vapi_alloc_ip_address_dump(sc_vpp_main.vapi_ctx);
     assert(mp != NULL);
 
     mp->payload.sw_if_index = sw_if_index;
     mp->payload.is_ipv6 = is_ipv6;
 
-    VAPI_CALL(vapi_ip_address_dump(g_vapi_ctx, mp, ip_address_dump_cb,
+    VAPI_CALL(vapi_ip_address_dump(sc_vpp_main.vapi_ctx, mp, ip_address_dump_cb,
                                    dctx));
     if (rv != VAPI_OK)
         return rv;
@@ -159,10 +159,10 @@ struct elt* ipv4_fib_dump_all()
     vapi_msg_ip_fib_dump *mp;
     vapi_error_e rv;
 
-    mp = vapi_alloc_ip_fib_dump(g_vapi_ctx);
+    mp = vapi_alloc_ip_fib_dump(sc_vpp_main.vapi_ctx);
     assert(mp != NULL);
 
-    VAPI_CALL(vapi_ip_fib_dump(g_vapi_ctx, mp, ip_fib_all_cb, &stack));
+    VAPI_CALL(vapi_ip_fib_dump(sc_vpp_main.vapi_ctx, mp, ip_fib_all_cb, &stack));
     if(VAPI_OK != rv)
         return NULL;
 

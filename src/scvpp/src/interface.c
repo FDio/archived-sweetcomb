@@ -34,6 +34,10 @@ sw_interface_dump_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
 
     vapi_payload_sw_interface_details *passed;
 
+	if (is_last) {
+		return VAPI_OK;
+	}
+
     ARG_CHECK2(VAPI_EINVAL, callback_ctx, reply);
 
     //copy
@@ -50,14 +54,14 @@ bin_api_sw_interface_dump(vapi_payload_sw_interface_details *details,
     vapi_msg_sw_interface_dump *mp;
     vapi_error_e rv;
 
-    mp = vapi_alloc_sw_interface_dump(g_vapi_ctx);
+    mp = vapi_alloc_sw_interface_dump(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
 
     /* Dump a specific interfaces */
     mp->payload.name_filter_valid = true;
     strncpy((char *)mp->payload.name_filter, iface_name, IFACE_SUBSTR);
 
-    VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_sw_interface_dump(sc_vpp_main.vapi_ctx, mp,
                                      sw_interface_dump_cb, details));
     if (rv != VAPI_OK)
         return -SCVPP_EINVAL;
@@ -111,13 +115,13 @@ struct elt* interface_dump_all()
     vapi_msg_sw_interface_dump *mp;
     vapi_error_e rv;
 
-    mp = vapi_alloc_sw_interface_dump(g_vapi_ctx);
+    mp = vapi_alloc_sw_interface_dump(sc_vpp_main.vapi_ctx);
 
     /* Dump all */
     mp->payload.name_filter_valid = false;
     memset(mp->payload.name_filter, 0, sizeof(mp->payload.name_filter));
 
-    VAPI_CALL(vapi_sw_interface_dump(g_vapi_ctx, mp, sw_interface_all_cb,
+    VAPI_CALL(vapi_sw_interface_dump(sc_vpp_main.vapi_ctx, mp, sw_interface_all_cb,
                                      &stack));
     if (VAPI_OK != rv)
         return NULL;
@@ -140,12 +144,12 @@ int interface_enable(const char *interface_name, const bool enable)
     if (rc != 0)
         return -SCVPP_NOT_FOUND;
 
-    mp = vapi_alloc_sw_interface_set_flags(g_vapi_ctx);
+    mp = vapi_alloc_sw_interface_set_flags(sc_vpp_main.vapi_ctx);
     assert(NULL != mp);
     mp->payload.sw_if_index = sw_if_index;
     mp->payload.admin_up_down = enable;
 
-    VAPI_CALL(vapi_sw_interface_set_flags(g_vapi_ctx, mp,
+    VAPI_CALL(vapi_sw_interface_set_flags(sc_vpp_main.vapi_ctx, mp,
                                           sw_interface_set_flags_cb, NULL));
     if (VAPI_OK != rv)
         return -SCVPP_EINVAL;

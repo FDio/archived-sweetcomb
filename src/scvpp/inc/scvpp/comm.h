@@ -112,6 +112,7 @@ api_name##_cb (struct vapi_ctx_s *ctx, void *callback_ctx, vapi_error_e rv, \
 #define VAPI_CALL_MODE(call_code, vapi_mode) \
     do \
     { \
+        pthread_mutex_lock (&sc_vpp_main.vapi_lock); \
         if (VAPI_MODE_BLOCKING == (vapi_mode)) \
         { \
             rv = call_code; \
@@ -120,13 +121,14 @@ api_name##_cb (struct vapi_ctx_s *ctx, void *callback_ctx, vapi_error_e rv, \
         { \
             while (VAPI_EAGAIN == (rv = call_code)); \
             if (rv != VAPI_OK) { /* try once more to get reply */ \
-                rv = vapi_dispatch (g_vapi_ctx); \
+                rv = vapi_dispatch (sc_vpp_main.vapi_ctx); \
             } \
         } \
+        pthread_mutex_unlock (&sc_vpp_main.vapi_lock); \
     } \
     while (0)
 
-#define VAPI_CALL(call_code) VAPI_CALL_MODE(call_code, g_vapi_mode)
+#define VAPI_CALL(call_code) VAPI_CALL_MODE(call_code, sc_vpp_main.vapi_mode)
 
 struct elt {
     void *data; //vapi_payload structure
@@ -200,7 +202,7 @@ api_name##_all_cb(vapi_ctx_t ctx, void *caller_ctx, vapi_error_e rv, bool is_las
 
 #define foreach_stack_elt(stack)  \
     for(void *data = pop(&stack); data != NULL ; data = pop(&stack))
-//for(void *data = pop(&stack); stack != NULL ; data = pop(&stack)) // No!!
+
 
 int sc_aton(const char *cp, u8 * buf, size_t length);
 char * sc_ntoa(const u8 * buf);
@@ -219,11 +221,25 @@ uint32_t hardntohlu32(uint8_t host[4]);
  * VPP
  */
 
-extern vapi_ctx_t g_vapi_ctx;
-extern vapi_mode_e g_vapi_mode;
+typedef struct sc_vpp_main_t {
+	/* VAPI context */
+	vapi_ctx_t vapi_ctx;
 
-int sc_connect_vpp();
-int sc_disconnect_vpp();
+	/* VAPI calling mode: VAPI_MODE_BLOCKING, VAPI_MODE_NONBLOCKING */
+	vapi_mode_e vapi_mode;
+
+	/* Mutex for keeping atomicity when calling VAPI */
+	pthread_mutex_t vapi_lock;
+
+	/* pid of VPP */
+	pid_t pid;
+} sc_vpp_main_t;
+
+extern sc_vpp_main_t sc_vpp_main;
+
+sc_vpp_main_t *sc_connect_vpp();
+void sc_disconnect_vpp();
+pid_t sc_get_vpp_pid();
 int sc_end_with(const char* str, const char* end);
 
 #endif //__SC_VPP_COMMM_H__
