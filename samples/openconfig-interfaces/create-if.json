@@ -1,0 +1,13 @@
+{
+    "openconfig-interfaces:interfaces": {
+        "interface": [
+            {
+                "name": "GigabitEthernet0/8/0",
+                "config": {
+                    "type": "iana-if-type:ethernetCsmacd",
+                    "enabled": true
+                }
+            }
+        ]
+    }
+}

@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2018 HUACHENTEL and/or its affiliates.
+ * Copyright (c) 2019 Cisco and/or its affiliates.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at:
@@ -16,15 +18,100 @@
 #include "sc_plugins.h"
 
 #include <dirent.h>
+#include <string.h>
+#include <errno.h>
 
-#include <vpp-api/client/stat_client.h>
+#include <vom/hw.hpp>
+#include <vom/om.hpp>
+
+static int vpp_pid_start;
 
 sc_plugin_main_t sc_plugin_main;
+
+using namespace VOM;
+
+#define _DIRENT_NAME 256
+#define CMDLINE_MAX _DIRENT_NAME + 15
+#define VPP_FULL_PATH "/usr/bin/vpp"
 
 sc_plugin_main_t *sc_get_plugin_main()
 {
     return &sc_plugin_main;
 }
+
+/**
+ * @brief get one pid of any running vpp process.
+ * @return Return vpp pid or -ESRH value if process was not found
+ */
+int get_vpp_pid()
+{
+    DIR *dir = NULL;
+    struct dirent *ptr = NULL;
+    FILE *fp = NULL;
+    char filepath[CMDLINE_MAX];
+    char filetext[sizeof(VPP_FULL_PATH)+1];
+    char *first = NULL;
+    size_t cnt;
+
+    dir = opendir("/proc");
+    if (dir == NULL)
+        return -errno;
+
+    /* read vpp pid file in proc, return pid of vpp */
+    while (NULL != (ptr = readdir(dir)))
+    {
+        if ((0 == strcmp(ptr->d_name, ".")) || (0 == strcmp(ptr->d_name, "..")))
+            continue;
+
+        if (DT_DIR != ptr->d_type)
+            continue;
+
+        /* Open cmdline of PID */
+        snprintf(filepath, CMDLINE_MAX, "/proc/%s/cmdline", ptr->d_name);
+        fp = fopen(filepath, "r");
+        if (fp == NULL)
+            continue;
+
+        /* Write '/0' char in filetext array to prevent stack reading */
+        bzero(filetext, sizeof(VPP_FULL_PATH));
+
+        /* Read the string written in cmdline file */
+        cnt = fread(filetext, sizeof(char), sizeof(VPP_FULL_PATH), fp);
+        if (cnt == 0) {
+            fclose(fp);
+            continue;
+        }
+        filetext[cnt] = '\0';
+
+        /* retrieve string before first space */
+        first = strtok(filetext, " ");
+        if (first == NULL) { //unmet space delimiter
+            fclose(fp);
+            continue;
+        }
+
+        /* One VPP process has been found */
+        if (!strcmp(first, "vpp") || !strcmp(first, VPP_FULL_PATH)) {
+            fclose(fp);
+            closedir(dir);
+            return atoi(ptr->d_name);
+        }
+
+        fclose(fp); // we assume fclose don't fail
+
+        errno = 0; //to distinguish readdir() error from end of dir
+    }
+
+    if (errno != 0) { //this means an error has occured in readir
+        SRP_LOG_ERR("readir errno %d", errno);
+        return -errno;
+    }
+
+    closedir(dir);
+
+    return -ESRCH;
+}
+
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 {
@@ -32,17 +119,17 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
 
     sc_plugin_main.session = session;
 
-    /* Connect to VAPI */
-	if (!(sc_plugin_main.vpp_main = sc_connect_vpp())) {
-		SRP_LOG_ERR("VPP connect error: %d", rc);
-		return SR_ERR_INTERNAL;
-	}
+    /* Connection to VAPI via VOM and VOM database */
+    HW::init();
+    OM::init();
+    while (HW::connect() != true);
+    SRP_LOG_INF_MSG("Connection to VPP established");
 
-    /* Connect to STAT API */
-    rc = stat_segment_connect(STAT_SEGMENT_SOCKET_FILE);
-    if (rc != 0) {
-        SRP_LOG_ERR("vpp stat connect error , with return %d.", rc);
-        return SR_ERR_INTERNAL;
+    try {
+        OM::populate("boot");
+    } catch (...) {
+        SRP_LOG_ERR_MSG("fail populating VOM database");
+        exit(1);
     }
 
     rc = sc_call_all_init_function(&sc_plugin_main);
@@ -54,7 +141,12 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx)
     /* set subscription as our private context */
     *private_ctx = sc_plugin_main.subscription;
 
-    return rc;
+    /* Get initial PID of VPP process */
+    vpp_pid_start = get_vpp_pid();
+    if (vpp_pid_start < 0)
+        return SR_ERR_DISCONNECT;
+
+    return SR_ERR_OK;
 }
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
@@ -63,22 +155,37 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx)
 
     /* subscription was set as our private context */
     if (private_ctx != NULL)
-        sr_unsubscribe(session, private_ctx);
+        sr_unsubscribe(session, (sr_subscription_ctx_t*) private_ctx);
     SRP_LOG_DBG_MSG("unload plugin ok.");
 
-    /* Disconnect from STAT API */
-    stat_segment_disconnect();
-
-    /* Disconnect from VAPI */
-    sc_disconnect_vpp();
+    HW::disconnect();
     SRP_LOG_DBG_MSG("plugin disconnect vpp ok.");
 }
 
-int sr_plugin_health_check_cb( __attribute__ ((unused)) sr_session_ctx_t *session,
-	__attribute__ ((unused)) void *private_ctx)
+int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx)
 {
-	/* health check, will use shell to detect vpp when plugin is loaded */
-	/* health_check will run every 10 seconds in loop*/
-	pid_t pid = sc_get_vpp_pid();
-	return sc_plugin_main.vpp_main->pid == pid && pid != 0 ? SR_ERR_OK : SR_ERR_INTERNAL;
+    UNUSED(session); UNUSED(private_ctx);
+    int vpp_pid_now = get_vpp_pid();
+
+    if (vpp_pid_now == vpp_pid_start)
+        return SR_ERR_OK; //VPP has not crashed
+
+    SRP_LOG_WRN("VPP has crashed, new pid %d", vpp_pid_now);
+
+    /* Wait until we succeed connecting to VPP */
+    HW::disconnect();
+    while (HW::connect() != true) {
+        SRP_LOG_DBG_MSG("Try connecting to VPP again");
+    };
+
+    SRP_LOG_DBG_MSG("Connection to VPP established again");
+
+    /* Though VPP has crashed, VOM database has kept the configuration.
+     * This function replays the previous configuration to reconfigure VPP
+     * so that VPP state matches sysrepo RUNNING DS and VOM database. */
+    OM::replay();
+
+    vpp_pid_start = vpp_pid_now;
+
+    return SR_ERR_OK;
 }

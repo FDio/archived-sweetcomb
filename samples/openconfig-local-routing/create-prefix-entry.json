@@ -1,0 +1,11 @@
+{
+    "openconfig-local-routing:local-routes": {
+        "static-routes": {
+          "static": [
+              {
+                "prefix": "8.0.0.0/8"
+              }
+            ]
+        }
+    }
+}

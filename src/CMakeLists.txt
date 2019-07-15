@@ -15,7 +15,9 @@
 
 cmake_minimum_required(VERSION 3.0)
 project(sweetcomb)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
+# Cmake find modules directory
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # set default build type if not specified by user
 if(NOT CMAKE_BUILD_TYPE)
@@ -24,7 +26,6 @@ endif()
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
 
 # add subdirectories
-# add_subdirectory(scvpp)
 add_subdirectory(plugins)
 
 include(Packager)

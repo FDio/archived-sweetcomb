@@ -52,14 +52,14 @@ BUILD_DEB = curl build-essential autoconf automake ccache git cmake wget coreuti
 NETOPEER2_DEB = libssl-dev pkgconf
 #Dependencies for checkstyle
 CHECKSTYLE_DEB = indent
-#Dependencies for scvpp
-SCVPP_DEB = libcmocka-dev
 #Dependencies for sysrepo (swig required for sysrepo python, lua, java)
 SYSREPO_DEB = libev-dev libavl-dev bison flex libpcre3-dev libprotobuf-c-dev protobuf-c-compiler
 #Dependencies of libssh
 LIBSSH_DEB = zlib1g-dev
+#Dependencies of VOM
+LIBVOM_DEB = libboost-all-dev
 #Sum dependencies
-DEB_DEPENDS = ${BUILD_DEB} ${NETOPEER2_DEB} ${CHECKSTYLE_DEB} ${SCVPP_DEB} ${SYSREPO_DEB} ${LIBSSH_DEB}
+DEB_DEPENDS = ${BUILD_DEB} ${NETOPEER2_DEB} ${CHECKSTYLE_DEB} ${SYSREPO_DEB} ${LIBSSH_DEB} ${LIBVOM_DEB}
 
 #Dependencies for automatic test
 DEB_TEST_DEPENDS = python3-pip python-pip libcurl4-openssl-dev libssh-dev \
@@ -74,12 +74,10 @@ BUILD_RPM = curl autoconf automake ccache cmake3 wget gcc gcc-c++ git
 NETOPEER2_RPM = openssl-devel
 #Dependencies for checkstyle
 CHECKSTYLE_RPM = indent
-#Dependencies for scvpp
-SCVPP_RPM = libcmocka-devel
 #Dependencies for sysrepo
 SYSREPO_RPM = libev-devel bison flex pcre-devel protobuf-c-devel protobuf-c-compiler
 
-RPM_DEPENDS = ${BUILD_RPM} ${NETOPEER2_RPM} ${CHECKSTYLE_RPM} ${SCVPP_RPM} \
+RPM_DEPENDS = ${BUILD_RPM} ${NETOPEER2_RPM} ${CHECKSTYLE_RPM} \
 	      ${SYSREPO_RPM}
 
 #Dependencies for automatic test
@@ -87,7 +85,7 @@ RPM_TEST_DEPENDS = python36-devel python36-pip python-pip libxml2-devel \
 libxslt-devel libtool which cmake3
 
 .PHONY: help install-dep install-dep-extra install-vpp install-models \
-        uninstall-models build-scvpp build-plugins build-package docker \
+        uninstall-models build-plugins build-package docker \
         docker-test test clean distclean _clean_dl _libssh _libyang \
         _libnetconf2 _sysrepo _netopeer2
 
@@ -99,8 +97,6 @@ help:
 	@echo " install-models         - install YANG models"
 	@echo " uninstall-models       - uninstall YANG models"
 	@echo " install-test-extra     - install software extra dependencies from source code for YDK"
-	@echo " build-scvpp            - build scvpp"
-	@echo " test-scvpp             - unit test for scvpp"
 	@echo " build-plugins          - build plugins"
 	@echo " test-plugins           - integration test for sweetcomb plugins"
 	@echo " build-package          - build rpm or deb package"
@@ -134,13 +130,13 @@ ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
 	mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&wget https://git.libssh.org/projects/libssh.git/snapshot/libssh-0.7.7.tar.gz\
 	&&tar xvf libssh-0.7.7.tar.gz && cd libssh-0.7.7 && mkdir build && cd build\
-	&&cmake -DZLIB_LIBRARY=/usr/lib/x86_64-linux-gnu/libz.so -DZLIB_INCLUDE_DIR=/usr/include/ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&$(cmake) -DZLIB_LIBRARY=/usr/lib/x86_64-linux-gnu/libz.so -DZLIB_INCLUDE_DIR=/usr/include/ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j$(nproc) &&sudo make install && sudo ldconfig&&cd ../../;
 else ifeq ($(OS_ID),centos)
 	mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&wget https://git.libssh.org/projects/libssh.git/snapshot/libssh-0.7.7.tar.gz\
 	&&tar xvf libssh-0.7.7.tar.gz && cd libssh-0.7.7 && mkdir build && cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j$(nproc) &&sudo make install && sudo ldconfig&&cd ../../;
 endif
 
@@ -148,7 +144,7 @@ _libyang:
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&wget https://github.com/CESNET/libyang/archive/v0.16-r3.tar.gz\
 	&&tar xvf v0.16-r3.tar.gz && cd libyang-0.16-r3 && mkdir -p build&& cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
 	-DGEN_LANGUAGE_BINDINGS=OFF -DGEN_CPP_BINDINGS=ON \
 	-DGEN_PYTHON_BINDINGS=OFF -DBUILD_EXAMPLES=OFF \
 	-DENABLE_BUILD_TESTS=OFF .. \
@@ -159,7 +155,7 @@ _libnetconf2:
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&git clone https://github.com/CESNET/libnetconf2.git&&cd libnetconf2\
 	&&git checkout 7e5f7b05f10cb32a546c42355481c7d87e0409b8&& mkdir -p build&& cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF\
+	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF\
 	-DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j $(nproc) &&make install&&ldconfig\
 	&&cd ../../\
@@ -168,7 +164,7 @@ _sysrepo:
 	@mkdir -p $(BR)/downloads/&&cd $(BR)/downloads/\
 	&&wget https://github.com/sysrepo/sysrepo/archive/v0.7.7.tar.gz\
 	&&tar xvf v0.7.7.tar.gz && cd sysrepo-0.7.7 && mkdir -p build && cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
 	-DGEN_LANGUAGE_BINDINGS=OFF -DGEN_CPP_BINDINGS=ON -DGEN_LUA_BINDINGS=OFF \
 	-DGEN_PYTHON_BINDINGS=OFF -DGEN_JAVA_BINDINGS=OFF -DBUILD_EXAMPLES=OFF \
 	-DENABLE_TESTS=OFF ..\
@@ -180,16 +176,16 @@ _netopeer2:
 	&&tar xvf v0.7-r1.tar.gz\
 	&& echo "Netopeer2:keystored" \
 	&& cd Netopeer2-0.7-r1/keystored && mkdir -p build && cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j$(nproc) && make install && sudo ldconfig\
 	&& echo "Netopeer2:server" \
 	&&cd ../../server/ && mkdir -p build && cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF\
+	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF\
 	-DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j$(nproc) && make install && ldconfig\
 	&& echo "Netopeer2:cli" \
 	&&cd ../../cli && mkdir -p build && cd build\
-	&&cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j$(nproc) && make install && sudo ldconfig\
 	&&cd ../../../ && mv v0.7-r1.tar.gz Netopeer2-0.7-r1.tar.gz\
 
@@ -235,7 +231,7 @@ install-vpp:
 	@echo "please install vpp as vpp's guide from source if failed"
 ifeq ($(PKG),deb)
 #	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.deb.sh | sudo bash
-	@sudo -E apt-get -y --force-yes install vpp libvppinfra* vpp-plugin-* vpp-dev
+	@sudo -E apt-get -y --force-yes install vpp libvppinfra* vpp-plugin-* vpp-dev vom
 else ifeq ($(PKG),rpm)
 #	@curl -s https://packagecloud.io/install/repositories/fdio/release/script.rpm.sh | sudo bash
 ifeq ($(OS_ID),centos)
@@ -246,28 +242,40 @@ endif
 install-test-extra: _clean_dl _libssh _test_python _ydk
 	@cd ../ && rm -rf $(BR)/downloads
 
-build-scvpp:
-	@mkdir -p $(BR)/build-scvpp/; cd $(BR)/build-scvpp; \
-	$(cmake) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/scvpp/;\
-	make install
-	@# NEW INSTRUCTIONS TO BUILD-SCVPP MUST BE DECLARED ON A NEW LINE WITH '@'
-
-test-scvpp: build-scvpp
-	@cd $(BR)/build-scvpp; make test ARGS="-V"
-
+#Centos needs to build sysrepo plugin with same toolchain as libvom.so i.e.
+#devtoolset-7.
 build-plugins:
+ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
 	@mkdir -p $(BR)/build-plugins/; cd $(BR)/build-plugins/; \
-	$(cmake) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/plugins/; \
+	$(cmake) -DCMAKE_BUILD_TYPE=Debug \
+	-DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/; \
 	make install
+else ifeq ($(OS_ID),centos)
+	@mkdir -p $(BR)/build-plugins/; cd $(BR)/build-plugins/; \
+	$(cmake) -DCMAKE_BUILD_TYPE=Debug \
+	-DCMAKE_PROGRAM_PATH:PATH="/opt/rh/devtoolset-7/root/bin" \
+	-DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/; \
+	make install
+endif
 	@# NEW INSTRUCTIONS TO BUILD-PLUGINS MUST BE DECLARED ON A NEW LINE WITH '@'
+
 
 test-plugins: install-models
 	@test/run_test.py --dir ./test/
 
 build-package:
+ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
 	@mkdir -p $(BR)/build-package/; cd $(BR)/build-package/;\
-	$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
-	-DENABLE_TESTS=OFF $(WS_ROOT)/src/; make package;
+	$(cmake) -DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/;\
+	make package;
+else ifeq ($(OS_ID),centos)
+	@mkdir -p $(BR)/build-package/; cd $(BR)/build-package/;\
+	$(cmake) -DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_PROGRAM_PATH:PATH="/opt/rh/devtoolset-7/root/bin" \
+	-DCMAKE_INSTALL_PREFIX:PATH=/usr $(WS_ROOT)/src/;\
+	make package;
+endif
 	@# NEW INSTRUCTIONS TO BUILD-PACKAGE MUST BE DECLARED ON A NEW LINE WITH
 	@# '@' NOT WITH ';' ELSE BUILD-PACKAGE WILL NOT RETURN THE CORRECT
 	@# RETURN CODE FOR JENKINS CI
@@ -281,34 +289,24 @@ install-models:
 	sysrepoctl --install --yang=ietf-nat@2017-11-16.yang > /dev/null; \
 	sysrepoctl -e if-mib -m ietf-interfaces;
 	@cd src/plugins/yang/openconfig; \
-	sysrepoctl -S --install --yang=openconfig-local-routing@2017-05-15.yang > /dev/null; \
 	sysrepoctl -S --install --yang=openconfig-interfaces@2018-08-07.yang > /dev/null; \
-	sysrepoctl -S --install --yang=openconfig-if-ip@2018-01-05.yang > /dev/null; \
-	sysrepoctl -S --install --yang=openconfig-acl@2018-11-21.yang > /dev/null;
 
 uninstall-models:
 	@ sysrepoctl -u -m ietf-ip > /dev/null; \
-	sysrepoctl -u -m openconfig-acl > /dev/null; \
-	sysrepoctl -u -m openconfig-if-ip > /dev/null; \
-	sysrepoctl -u -m openconfig-local-routing > /dev/null; \
-	sysrepoctl -u -m openconfig-if-aggregate > /dev/null; \
 	sysrepoctl -u -m openconfig-interfaces > /dev/null; \
 	sysrepoctl -u -m ietf-nat > /dev/null; \
 	sysrepoctl -u -m iana-if-type > /dev/null; \
 	sysrepoctl -u -m ietf-interfaces > /dev/null; \
-	sysrepoctl -u -m openconfig-vlan-types > /dev/null;
 
 clean:
-	@if [ -d $(BR)/build-scvpp ] ;   then cd $(BR)/build-scvpp   && make clean; fi
 	@if [ -d $(BR)/build-plugins ] ; then cd $(BR)/build-plugins && make clean; fi
 	@if [ -d $(BR)/build-package ] ; then cd $(BR)/build-package && make clean; fi
 
 distclean:
-	@rm -rf $(BR)/build-scvpp
 	@rm -rf $(BR)/build-plugins
 	@rm -rf $(BR)/build-package
 
-docker:
+docker: distclean
 	@scripts/docker.sh
 
 docker-test:

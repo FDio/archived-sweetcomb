@@ -42,7 +42,6 @@ docker run -id --privileged --name ${CONTAINER} ${IMAGE_TEST}
 docker cp . ${CONTAINER}:/root/src/sweetcomb
 docker exec -it ${CONTAINER} bash -c "
     cd /root/src/sweetcomb &&
-    make build-scvpp &&
     make build-plugins"
 if [ "$?" == 0 ]; then
     echo "Run tests"

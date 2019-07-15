@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 PANTHEON.tech.
+ * Copyright (c) 2019 Cisco and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,146 +18,83 @@
 #ifndef __SYS_UTIL_H__
 #define __SYS_UTIL_H__
 
-#include <sysrepo.h>
-#include <sysrepo/xpath.h>
-#include <sysrepo/plugins.h>
+//TODO: Add to only one header file
+extern "C" {
+    #include <sysrepo.h>
+    #include <sysrepo/xpath.h>
+    #include <sysrepo/plugins.h>
+}
 
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <iostream>
+#include <string>
+#include <exception>
+#include <boost/asio.hpp>
 
-#include <string.h>
-
-#include <scvpp/comm.h>
+using namespace std;
 
 /* BEGIN sysrepo utils */
 
-#define foreach_change(ds, it, oper, old, new) \
+#define foreach_change(ds, it, oper, old, newch) \
     while( (event != SR_EV_ABORT) && \
-            sr_get_change_next(ds, it, &oper, &old, &new) == SR_ERR_OK)
+            sr_get_change_next(ds, it, &oper, &old, &newch) == SR_ERR_OK)
 
 #define XPATH_SIZE 2000
-#define NOT_AVAL "NOT AVAILABLE"
 
-static inline int
-get_xpath_key(char *dst, char *xpath, char *node, char *key, int length,
-              sr_xpath_ctx_t *state) {
-    char *tmp;
+#define ARG_CHECK(retval, arg) \
+    do \
+    { \
+        if (NULL == (arg)) \
+        { \
+            return (retval); \
+        } \
+    } \
+    while (0)
 
-    tmp = sr_xpath_key_value(xpath, node, key, state);
-    if (!tmp) {
-        SRP_LOG_ERR("%s %s not found.", node, key);
-        return SR_ERR_INVAL_ARG;
-    }
-    strncpy(dst, tmp, length);
-    sr_xpath_recover(state);
+#define ARG_CHECK2(retval, arg1, arg2) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2)
 
-    return 0;
-}
+#define ARG_CHECK3(retval, arg1, arg2, arg3) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2); \
+    ARG_CHECK(retval, arg3)
+
+#define ARG_CHECK4(retval, arg1, arg2, arg3, arg4) \
+    ARG_CHECK(retval, arg1); \
+    ARG_CHECK(retval, arg2); \
+    ARG_CHECK(retval, arg3); \
+    ARG_CHECK(retval, arg4)
+
+/* Suppress compiler warning about unused variable.
+ * This must be used only for callback function else suppress your unused
+ * parameter in function prototype. */
+#define UNUSED(x) (void)x
 
 /* END of sysrepo utils */
 
-typedef struct
-{
-    uint8_t address[4];
-} sc_ipv4_addr;
+namespace utils {
 
-/**
- * @brief Extract IP "AAA.BBB.CCC.DDD" from an IP prefix: "AAA.BBB.CCC.DDD/XX"
- * @param prefix - IPv4 or IPv6 prefix:
- * @return prefix length
+/* Convert netmask to prefix length.
+ * 255.255.255.0->24
  */
-static inline int ip_prefix_split(const char* ip_prefix)
-{
-    //find the slash
-    char* slash = strchr(ip_prefix, '/');
-    if (NULL == slash)
-        return -1;
-
-    //extract subnet mask length
-    char * eptr = NULL;
-    uint8_t plen = strtoul(slash + 1, &eptr, 10);
-    if (*eptr || plen <= 0)
-        return -1;
-
-    //keep just the address part
-    *slash = '\0';         //replace '/' with 0
-
-    //return prefix length
-    return plen;
-}
-
-/**
- * @brief Get IPv4 host address from IPv4 prefix.
- *
- * @param[out] dst Host IPv4 address.
- * @param[in] src IPv4 prefix.
- * @param[out] prefix Get Prefix length, optional value. Can be NULL.
- * @return -1 when failure, 0 on success.
- */
-static inline int
-prefix2ip4(char *dst, const char *src, uint8_t *prefix_length)
-{
-    if (!src || !dst)
-        return -1;
-
-    char *p = strchr(src, '/');
-    if (!p)
-        return -1; // '/' not found
-
-    size_t size = p - src;
-    if ((size + 1) > VPP_IP4_ADDRESS_STRING_LEN) //+ 1 needed for \0
-        return -1;
-
-    strncpy(dst, src, size);
-
-    if (!prefix_length)
-        *prefix_length = atoi(++p);
-
-    return 0;
-}
-
-/**
- * @brief Get IPv6 host address from IPv6 prefix.
- *
- * @param[out] dst Host IPv6 address.
- * @param[in] src IPv6 prefix.
- * @param[out] prefix Get Prefix length, optional value. Can be NULL.
- * @return -1 when failure, 0 on success.
- */
-static inline int
-prefix2ip6(char *dst, const char *src, uint8_t *prefix_length)
-{
-    if (!src || !dst)
-        return -1;
-
-    char *p = strchr(src, '/');
-    if (!p)
-        return -1; // '/' not found
-
-    size_t size = p - src;
-    if ((size + 1) > VPP_IP6_ADDRESS_STRING_LEN) //+ 1 needed for \0
-        return -1;
-
-    strncpy(dst, src, size);
-
-    if (!prefix_length)
-        *prefix_length = atoi(++p);
-
-    return 0;
-}
-
-/**
- * @brief Helper function for converting netmask (ex: 255.255.255.0)
- * to prefix length (ex: 24).
- * @param netmask - string of netmask "AAA.BBB.CCC.DDD"
- * @return prefix length
- */
-static inline uint8_t netmask_to_prefix(const char *netmask)
+inline uint8_t netmask_to_plen(boost::asio::ip::address netmask)
 {
     in_addr_t n = 0;
     uint8_t i = 0;
+    int af;
+    int rc;
 
-    inet_pton(AF_INET, netmask, &n);
+    if (netmask.is_v4())
+        af = AF_INET;
+    else if (netmask.is_v6())
+        af = AF_INET6;
+    else
+        throw std::runtime_error("Invalid address family");
+
+    /* Convert address to binary form */
+    rc = inet_pton(af, netmask.to_string().c_str(), &n);
+    if (rc <= 0)
+        throw std::runtime_error("Fail converting netmask to prefix length");
 
     while (n > 0) {
         n = n >> 1;
@@ -166,69 +104,42 @@ static inline uint8_t netmask_to_prefix(const char *netmask)
     return i;
 }
 
-/**
- * @brief Convert prefix length to netmask
- * @param prefix - prefix length (ex: 24)
- * @return netmask - integer (ex: 111111111111111111111111100000000b )
- */
-static inline uint32_t prefix2mask(int prefix)
-{
-    if (prefix) {
-        return htonl(~((1 << (32 - prefix)) - 1));
-    } else {
-        return htonl(0);
-    }
-}
+class prefix {
+public:
+     /* Default Constructor */
+    prefix();
 
-/**
- * @brief Get IPv4 broadcast IP address form IPv4 network address.
- *
- * @param[out] broadcat Broadcast Ipv4 address.
- * @param[in] network Network IPv4 address.
- * @param[in] prefix Prefix number.
- * @return -1 when failure, 0 on success.
- */
-static inline int get_network_broadcast(sc_ipv4_addr *broadcast, const sc_ipv4_addr *network,
-                          uint8_t prefix_length)
-{
-    uint8_t mask = ~0;
-    uint8_t tmp_p = prefix_length;
-    int i;
+    /* Copy constructor */
+    prefix(const prefix &p);
 
-    ARG_CHECK2(-1, network, broadcast);
+    /* Constuctor from string prefix */
+    prefix(std::string p);
 
-    if (32 < prefix_length) {
-        SRP_LOG_ERR_MSG("Prefix length to big.");
-        return -1;
-    }
+    /* Create a prefix from a string */
+    static prefix make_prefix(std::string p);
 
-    for (i = 0; i < 4 ; i++) {
-        broadcast->address[i] = network->address[i] |
-                                            (mask >> (tmp_p > 8 ? 8 : tmp_p));
-        if (tmp_p >= 8) {
-            tmp_p -= 8;
-        } else {
-            tmp_p = 0;
-        }
-    }
+    /* Return prefix "AAA.BBB.CCC.DDD/ZZ"
+     * "YYYY:YYYY:YYYY:YYYY:YYYY:YYYY:YYYY:YYYY/ZZZ */
+    std::string to_string() const;
 
-    return 0;
-}
+    /* Extract prefix length "ZZ"/"ZZZ" an IP prefix: "AAA.BBB.CCC.DDD/ZZ"
+     * "YYYY:YYYY:YYYY:YYYY:YYYY:YYYY:YYYY:YYYY/ZZZ */
+    unsigned short prefix_length() const;
 
-/**
- * @brief Get last IPv4 address from the IP range.
- *
- * @param[out] last_ip_address Last Ipv4 address.
- * @param[in] first_ip_address First IPv4 address.
- * @param[in] prefix Prefix number.
- * @return -1 when failure, 0 on success.
- */
-static inline int get_last_ip_address(sc_ipv4_addr* last_ip_address,
-                        const sc_ipv4_addr* first_ip_address,
-                        uint8_t prefix_length)
-{
-    return get_network_broadcast(last_ip_address, first_ip_address,
-                                 prefix_length);
-}
+    /* Extract IP "AAA.BBB.CCC.DDD" from an IP prefix: "AAA.BBB.CCC.DDD/ZZ"
+     * "YYYY:YYYY:YYYY:YYYY:YYYY:YYYY:YYYY:YYYY/ZZZ */
+    boost::asio::ip::address address() const;
+
+    /* Return true if prefix is empty */
+    bool empty() const;
+
+    friend ostream& operator<<(ostream& os, const prefix& p);
+
+private:
+    boost::asio::ip::address m_address;
+    unsigned short m_prefix_len;
+};
+
+} //end of utils namespace
 
 #endif /* __SYS_UTIL_H__ */

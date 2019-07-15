@@ -16,9 +16,11 @@
 #ifndef __SC_PLUGINS_H__
 #define __SC_PLUGINS_H__
 
-#include <sysrepo.h>
-#include <sysrepo/values.h>
-#include <sysrepo/plugins.h>
+extern "C" {
+    #include <sysrepo.h>
+    #include <sysrepo/values.h>
+    #include <sysrepo/plugins.h>
+}
 
 #include "sc_init.h"
 #include "sys_util.h"
@@ -34,15 +36,15 @@ typedef struct sc_plugin_main_t {
     _sc_init_function_list_elt_t *init_function_registrations;
     _sc_exit_function_list_elt_t *exit_function_registrations;
 
-	/* VPP main structure */
-	sc_vpp_main_t *vpp_main;
 } sc_plugin_main_t;
 
 sc_plugin_main_t *sc_get_plugin_main();
 
 //functions that sysrepo-plugin need
-int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx);
-void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *private_ctx);
-int sr_plugin_health_check_cb(sr_session_ctx_t *session, void *private_ctx);
+extern "C" int sr_plugin_init_cb(sr_session_ctx_t *session, void **private_ctx);
+extern "C" void sr_plugin_cleanup_cb(sr_session_ctx_t *session,
+                                     void *private_ctx);
+extern "C" int sr_plugin_health_check_cb(sr_session_ctx_t *session,
+                                         void *private_ctx);
 
 #endif //__SC_PLUGINS_H__

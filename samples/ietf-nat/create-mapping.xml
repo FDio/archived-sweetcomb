@@ -1,0 +1,19 @@
+<nat xmlns="urn:ietf:params:xml:ns:yang:ietf-nat">
+    <instances>
+        <instance>
+            <id>1</id>
+            <connection-limits>
+                <limit-per-instance>5</limit-per-instance>
+            </connection-limits>
+            <mapping-table>
+                <mapping-entry>
+                    <index>1</index>
+                    <type>static</type>
+                    <internal-src-address>10.0.0.2/32</internal-src-address>
+                    <external-src-address>192.168.1.2/32</external-src-address>
+                </mapping-entry>
+            </mapping-table>
+        </instance>
+    </instances>
+</nat>
+

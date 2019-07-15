@@ -1,0 +1,11 @@
+{
+    "ietf-interfaces:interfaces": {
+        "interface": [
+            {
+                "name": "GigabitEthernet0/8/0",
+                "type": "iana-if-type:ethernetCsmacd",
+                "enabled": true
+            }
+        ]
+    }
+}

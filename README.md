@@ -22,7 +22,6 @@ Details of the changes leading up to this version of Sweetcomb can be found unde
 | ---------------------- | ------------------------------------------- |
 |      build-root        | Build output directory                      |
 | @ref src/plugins       | Sweetcomb bundled plugins directory         |
-| @ref src/scvpp         | Sweetcomb to VPP communication              |
 
 ## Getting started
 
@@ -37,7 +36,6 @@ Firstly, please follow below steps to install dependencies and build code:
    make install-dep
    make install-dep-extra
    make install-vpp
-   make build-scvpp
    make build-plugins
 ```
 

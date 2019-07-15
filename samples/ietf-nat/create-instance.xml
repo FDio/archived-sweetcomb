@@ -1,0 +1,11 @@
+<nat xmlns="urn:ietf:params:xml:ns:yang:ietf-nat">
+    <instances>
+        <instance>
+            <id>1</id>
+            <connection-limits>
+                <limit-per-instance>5</limit-per-instance>
+            </connection-limits>
+        </instance>
+    </instances>
+</nat>
+
