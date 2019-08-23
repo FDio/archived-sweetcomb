@@ -235,7 +235,7 @@ oc_interfaces_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt,
     reply = dump->begin()->get_payload();
 
     sr_val_build_xpath(&vals[cnt], "%s/name", xpath_root);
-    sr_val_set_str_data(&vals[cnt], SR_STRING_T, (char *)reply.interface_name);
+    sr_val_set_str_data(&vals[cnt], SR_STRING_T, (char *)reply.interface_name.buf);
     cnt++;
 
     //TODO revisit types after V3PO has been implemented
@@ -250,7 +250,7 @@ oc_interfaces_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt,
 
     sr_val_build_xpath(&vals[cnt], "%s/enabled", xpath_root);
     vals[cnt].type = SR_BOOL_T;
-    vals[cnt].data.bool_val = reply.admin_up_down;
+    vals[cnt].data.bool_val = reply.flags;
     cnt++;
 
     sr_val_build_xpath(&vals[cnt], "%s/ifindex", xpath_root);
@@ -260,12 +260,12 @@ oc_interfaces_state_cb(const char *xpath, sr_val_t **values, size_t *values_cnt,
 
     sr_val_build_xpath(&vals[cnt], "%s/admin-status", xpath_root);
     sr_val_set_str_data(&vals[cnt], SR_ENUM_T,
-                        reply.admin_up_down ? "UP" : "DOWN");
+                        reply.flags ? "UP" : "DOWN");
     cnt++;
 
     sr_val_build_xpath(&vals[cnt], "%s/oper-status", xpath_root);
     sr_val_set_str_data(&vals[cnt], SR_ENUM_T,
-                        reply.link_up_down ? "UP" : "DOWN");
+                        reply.link_duplex ? "UP" : "DOWN");
     cnt++;
 
     *values = vals;

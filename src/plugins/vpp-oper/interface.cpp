@@ -22,7 +22,7 @@ interface_dump::issue(connection& con)
     payload.name_filter_valid = 0;
   } else {
     payload.name_filter_valid = 1;
-    strcpy((char*)payload.name_filter, m_name.c_str());
+    strcpy((char*)payload.name_filter.buf, m_name.c_str());
   }
 
   VAPI_CALL(m_dump->execute());
