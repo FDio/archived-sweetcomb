@@ -1,7 +1,27 @@
 # Release Notes    {#release notes
 
+* @subpage release_notes_1908
 * @subpage release_notes_1904
 * @subpage release_notes_1901
+
+@page release_notes_1908 Release notes for Sweetcomb 19.08
+
+## Northbound Interface
+- Remove gNMI from sweetcomb to become a separate project.
+- Support for ietf-interfaces statistics
+
+## High Availability
+- migration from scvpp to vom.
+
+## Code Refactor
+- Enable mutil-thread VPP API calling support.
+- Callback helper function enhancement.
+- Introduce a new registration mechanism.
+
+## Test Framework
+- Docker build and test improvements
+- Automatic test run
+
 
 @page release_notes_1904 Release notes for Sweetcomb 19.04
 
