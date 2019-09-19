@@ -407,25 +407,27 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values,
     for (auto &it : *dump) {
         interface = it.get_payload();
 
-        SRP_LOG_DBG("State of interface %s", interface.interface_name.buf);
+        SRP_LOG_DBG("State of interface %s", interface.interface_name);
 
         /* it needs if-mib YANG feature to work !
          * admin-state: state as required by configuration */
         sr_val_build_xpath(&val[cnt], "%s[name='%s']/admin-status", xpath,
-                           interface.interface_name.buf);
+                           interface.interface_name);
         sr_val_set_str_data(&val[cnt], SR_ENUM_T,
-                            interface.flags? "up" : "down");
+                            (interface.flags == vapi_enum_if_status_flags::IF_STATUS_API_FLAG_ADMIN_UP) ?
+                            "up" : "down");
         cnt++;
 
         /* oper-state: effective state. can differ from admin-state */
         sr_val_build_xpath(&val[cnt], "%s[name='%s']/oper-status", xpath,
-                           interface.interface_name.buf);
+                           interface.interface_name);
         sr_val_set_str_data(&val[cnt], SR_ENUM_T,
-                            interface.link_duplex ? "up" : "down");
+                            (interface.flags == vapi_enum_if_status_flags::IF_STATUS_API_FLAG_LINK_UP) ?
+                            "up" : "down");
         cnt++;
 
         sr_val_build_xpath(&val[cnt], "%s[name='%s']/phys-address", xpath,
-                           interface.interface_name.buf);
+                           interface.interface_name);
         sr_val_build_str_data(&val[cnt], SR_STRING_T,
                               "%02x:%02x:%02x:%02x:%02x:%02x",
                               interface.l2_address[0], interface.l2_address[1],
@@ -434,13 +436,13 @@ ietf_interface_state_cb(const char *xpath, sr_val_t **values,
         cnt++;
 
         sr_val_build_xpath(&val[cnt], "%s[name='%s']/if-index", xpath,
-                           interface.interface_name.buf);
+                           interface.interface_name);
         val[cnt].type = SR_INT32_T;
         val[cnt].data.int32_val = interface.sw_if_index;
         cnt++;
 
         sr_val_build_xpath(&val[cnt], "%s[name='%s']/speed", xpath,
-                           interface.interface_name.buf);
+                           interface.interface_name);
         val[cnt].type = SR_UINT64_T;
         val[cnt].data.uint64_val = interface.link_speed;
         cnt++;
