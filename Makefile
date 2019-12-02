@@ -145,9 +145,9 @@ _libyang:
 	&&wget https://github.com/CESNET/libyang/archive/v0.16-r3.tar.gz\
 	&&tar xvf v0.16-r3.tar.gz && cd libyang-0.16-r3 && mkdir -p build&& cd build\
 	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
-	-DGEN_LANGUAGE_BINDINGS=OFF -DGEN_CPP_BINDINGS=ON \
-	-DGEN_PYTHON_BINDINGS=OFF -DBUILD_EXAMPLES=OFF \
-	-DENABLE_BUILD_TESTS=OFF .. \
+        -DGEN_LANGUAGE_BINDINGS=OFF -DGEN_CPP_BINDINGS=ON \
+        -DGEN_PYTHON_BINDINGS=OFF -DBUILD_EXAMPLES=OFF \
+        -DENABLE_BUILD_TESTS=OFF .. \
 	&&make -j$(nproc) &&make install&&cd ../../ \
 	&& mv v0.16-r3.tar.gz libyang-0.16-r3.tar.gz
 
@@ -156,7 +156,7 @@ _libnetconf2:
 	&&git clone https://github.com/CESNET/libnetconf2.git&&cd libnetconf2\
 	&&git checkout 7e5f7b05f10cb32a546c42355481c7d87e0409b8&& mkdir -p build&& cd build\
 	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF\
-	-DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+        -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j $(nproc) &&make install&&ldconfig\
 	&&cd ../../\
 
@@ -165,9 +165,9 @@ _sysrepo:
 	&&wget https://github.com/sysrepo/sysrepo/archive/v0.7.7.tar.gz\
 	&&tar xvf v0.7.7.tar.gz && cd sysrepo-0.7.7 && mkdir -p build && cd build\
 	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr \
-	-DGEN_LANGUAGE_BINDINGS=OFF -DGEN_CPP_BINDINGS=ON -DGEN_LUA_BINDINGS=OFF \
-	-DGEN_PYTHON_BINDINGS=OFF -DGEN_JAVA_BINDINGS=OFF -DBUILD_EXAMPLES=OFF \
-	-DENABLE_TESTS=OFF ..\
+        -DGEN_LANGUAGE_BINDINGS=OFF -DGEN_CPP_BINDINGS=ON -DGEN_LUA_BINDINGS=OFF \
+        -DGEN_PYTHON_BINDINGS=OFF -DGEN_JAVA_BINDINGS=OFF -DBUILD_EXAMPLES=OFF \
+        -DENABLE_TESTS=OFF ..\
 	&&make -j$(nproc) &&make install&&cd ../../&& mv v0.7.7.tar.gz sysrepo-0.7.7.tar.gz
 
 _netopeer2:
@@ -181,7 +181,7 @@ _netopeer2:
 	&& echo "Netopeer2:server" \
 	&&cd ../../server/ && mkdir -p build && cd build\
 	&&$(cmake) -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_TESTS=OFF\
-	-DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
+        -DCMAKE_INSTALL_PREFIX:PATH=/usr ..\
 	&&make -j$(nproc) && make install && ldconfig\
 	&& echo "Netopeer2:cli" \
 	&&cd ../../cli && mkdir -p build && cd build\
@@ -244,7 +244,7 @@ install-test-extra: _clean_dl _libssh _test_python _ydk
 
 #Centos needs to build sysrepo plugin with same toolchain as libvom.so i.e.
 #devtoolset-7.
-build-plugins:
+install-plugins:
 ifeq ($(filter ubuntu debian,$(OS_ID)),$(OS_ID))
 	@mkdir -p $(BR)/build-plugins/; cd $(BR)/build-plugins/; \
 	$(cmake) -DCMAKE_BUILD_TYPE=Debug \
